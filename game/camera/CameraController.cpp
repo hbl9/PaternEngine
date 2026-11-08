@@ -1,16 +1,18 @@
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
-#include "..\..\engine\camera\Camera.h"
-#include "..\..\engine\platform\InputManager.h"
-#include "..\..\engine\platform\Window.h"
 #include "CameraController.h"
+#include "../../engine/camera/Camera.h"
+#include "../../engine/platform/Window.h"
+#include "../../engine/platform/InputManager.h"
 
-CameraController::CameraController(Camera* cam) : _camera(cam) {}
+CameraController::CameraController(Camera* camera) : _camera(camera) {}
 
 glm::vec3 CameraController::GetPos() const { return _camera->GetPos(); }
 float CameraController::GetYaw()     const { return _camera->GetYaw(); }
 float CameraController::GetPitch()   const { return _camera->GetPitch(); }
+
+void CameraController::SetCamera(Camera* camera) { _camera = camera; }
 
 void CameraController::Update(InputManager& input, Window& window, float deltaTime)
 {

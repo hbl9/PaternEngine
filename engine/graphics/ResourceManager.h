@@ -1,14 +1,19 @@
 #pragma once
 
-#include "Mesh.h"
-#include "MeshFactory.h"
-#include "ShaderProgram.h"
+#include <memory>
 #include <string>
 #include <unordered_map>
+
+struct MeshData;
+
+class Mesh;
+class ShaderProgram;
 
 class ResourceManager
 {
 public:
+	ResourceManager() = default;
+
 	Mesh* GetMesh(const std::string& name) const;
 	ShaderProgram* GetShader(const std::string& name) const;
 

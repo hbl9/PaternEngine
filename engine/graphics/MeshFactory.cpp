@@ -1,3 +1,4 @@
+#include "VertexAttribute.h"
 #include "MeshFactory.h"
 #include <glad/glad.h>
 

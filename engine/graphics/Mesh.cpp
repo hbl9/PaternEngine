@@ -1,6 +1,6 @@
 #include "Mesh.h"
-#include <cassert>
 #include <glad/glad.h>
+#include <stdexcept>
 
 Mesh::Mesh() = default;
 Mesh::~Mesh() { Release(); }
@@ -30,9 +30,9 @@ void Mesh::Upload(std::span<const float> vertices,
 {
 	Release();
 
-	assert(!vertices.empty() && "[Mesh] Массив вершин пуст");
-	assert(!layout.empty() && "[Mesh] Описание вершины пустое");
-	assert(!indices.empty() && "[Mesh] Массив индексов пуст");
+	if (vertices.empty()) throw std::invalid_argument("[Mesh] Массив вершин пуст");
+	if (layout.empty()) throw std::invalid_argument("[Mesh] Описание вершины пустое");
+	if (indices.empty()) throw std::invalid_argument("[Mesh] Массив индексов пуст");
 
 	glGenVertexArrays(1, &_vao);
 	glBindVertexArray(_vao);
@@ -47,7 +47,7 @@ void Mesh::Upload(std::span<const float> vertices,
 
 	for (const VertexAttribute& attr : layout)
 	{
-		glVertexAttribPointer(attr.index, attr.size, attr.type, attr.normalized, attr.stride,
+		glVertexAttribPointer(attr.index, attr.size, attr.type, attr.normalized, static_cast<GLsizei>(attr.stride),
 			reinterpret_cast<const void*>(attr.offset));
 		glEnableVertexAttribArray(attr.index);
 	}
@@ -61,7 +61,7 @@ void Mesh::Upload(std::span<const float> vertices,
 void Mesh::Draw() const
 {
 	Bind();
-	glDrawElements(GL_TRIANGLES, _indexCount, GL_UNSIGNED_INT, nullptr);
+	glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(_indexCount), GL_UNSIGNED_INT, nullptr);
 }
 
 void Mesh::Bind()   const { glBindVertexArray(_vao); }

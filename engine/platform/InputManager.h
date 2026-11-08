@@ -1,7 +1,6 @@
 #pragma once
 
-#define GLFW_INCLUDE_NONE
-#include "Window.h"
+class Window;
 
 class InputManager
 {

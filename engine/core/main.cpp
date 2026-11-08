@@ -1,4 +1,5 @@
-﻿#include "..\..\game\Game.h"
+﻿#include "../../game/Game.h"
+#include "../../game/camera/CameraController.h"
 #include "Application.h"
 #include <clocale>
 #include <iostream>
@@ -17,7 +18,8 @@ int main(int argc, char** argv)
 	Application app(800, 800, "PatternEngine");
 
 	std::unique_ptr<Game> game = std::make_unique<Game>(isHost, connectIp);
-	if (!app.Init(std::move(game)))
+	std::unique_ptr<CameraController> cameraController = std::make_unique<CameraController>();
+	if (!app.Init(std::move(game), std::move(cameraController)))
 	{
 		std::cout << "Ошибка инициализации\n";
 		return 1;

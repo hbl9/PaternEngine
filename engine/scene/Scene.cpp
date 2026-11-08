@@ -1,15 +1,14 @@
 #include "../graphics/Mesh.h"
 #include "../graphics/ResourceManager.h"
 #include "../graphics/ShaderProgram.h"
-#include "Scene.h"
 #include "SceneObject.h"
+#include "Scene.h"
 #include <algorithm>
-#include <glm/fwd.hpp>
 #include <iostream>
-#include <memory>
-#include <string>
 #include <utility>
-#include <vector>
+
+Scene::Scene() : _resources(std::make_unique<ResourceManager>()) {}
+Scene::~Scene() = default;
 
 /// <summary>
 /// Creates SceneObject and adds it to the list of objects.

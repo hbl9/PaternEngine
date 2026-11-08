@@ -1,16 +1,11 @@
 #pragma once
 
-#include <glad/glad.h>
-#include <glm/glm.hpp>
-#include <iostream>
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
+#include <glm/vec2.hpp>
 
-enum class FrameRateMode
-{
-	VSync,
-	Unlimited
-};
+struct GLFWwindow;
+struct GLFWmonitor;
+
+enum class FrameRateMode { VSync, Unlimited };
 
 class Window
 {
@@ -21,17 +16,17 @@ public:
 	~Window();
 
 	bool IsCursorCaptured() const;
-	bool ShouldClose();
+	bool ShouldClose() const;
 
 	void SetCursorCaptured(bool captured);
 	void SetVSync(FrameRateMode frameRateMode);
-	void SetGLClearColor(GLfloat r, GLfloat g, GLfloat b, GLfloat a);
+	void SetGLClearColor(float r, float g, float b, float a);
 	float GetAspectRatio() const;
 
 	void MakeCurrent();
 
 	GLFWwindow* GetWindow() const;
-	glm::ivec2 GetSizeWindow();
+	glm::ivec2 GetSizeWindow() const;
 
 	void UpdateFrameBufferSize();
 	void SwapBuffers();

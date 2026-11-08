@@ -1,7 +1,9 @@
 #include "InputManager.h"
 #include "Window.h"
+
+#define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
-#include <cstdlib>
+#include <cmath>
 #include <utility>
 
 void InputManager::ResetMouse() { _firstMouse = true; }

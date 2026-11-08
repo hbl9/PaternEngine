@@ -1,14 +1,10 @@
+#include "SceneObject.h"
 #include "../graphics/Mesh.h"
 #include "../graphics/ShaderProgram.h"
-#include "SceneObject.h"
-#include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
-#include <iostream>
-#include <string>
 #include <type_traits>
-#include <variant>
-#include <vector>
+#include <stdexcept>
 
 SceneObject::SceneObject(const char* name, Mesh* mesh, ShaderProgram* shader) : _mesh(mesh), _name(name) { _material->Shader = shader; }
 SceneObject::SceneObject(const char* name) : _isNothing(true), _name(name) {}
@@ -76,16 +72,8 @@ void SceneObject::Move(float x, float y, float z) { Move(glm::vec3(x, y, z)); }
 void SceneObject::Draw(const glm::mat4& view, const glm::mat4& projection) const
 {
 	if (_isNothing) return;
-	if (!_material->Shader || !_material->Shader->IsValid())
-	{
-		std::cout << "Невалидный Shader\n";
-		return;
-	}
-	if (!_mesh)
-	{
-		std::cout << "Невалидный Mesh\n";
-		return;
-	}
+	if (!_material->Shader || !_material->Shader->IsValid()) throw std::runtime_error("Невалидный Shader");
+	if (!_mesh) throw std::runtime_error("Невалидный Mesh");
 
 	if (_dirty) CalculateObject();
 

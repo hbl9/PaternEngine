@@ -1,9 +1,8 @@
 #pragma once
 
-#include "..\engine\camera\ICameraController.h"
-#include "..\engine\game\IGame.h"
-
+#include "../engine/game/IGame.h"
 #include <string>
+#include <cstdint>
 #include <unordered_map>
 
 class SceneObject;
@@ -17,9 +16,10 @@ public:
 
 	void OnInit(Scene& scene) override;
 	void OnUpdate(float deltaTime, Scene& scene, InputManager& im) override;
+	void OnShutdown() override;
 
 private:
-	std::unordered_map<uint32_t, SceneObject*> _remotePlayers;
+	std::unordered_map<std::uint32_t, SceneObject*> _remotePlayers;
 
 	SceneObject* _player = nullptr;
 	SceneObject* _dick = nullptr;
@@ -29,6 +29,6 @@ private:
 	float _sendTimer = 0.0f;
 
 	void ApplyRemoteState(Scene& scene, const PlayerState& ps);
-	void RemoveRemotePlayer(Scene& scene, uint32_t id);
+	void RemoveRemotePlayer(Scene& scene, std::uint32_t id);
 	void SendLocalState();
 };

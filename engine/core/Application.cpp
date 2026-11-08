@@ -1,21 +1,20 @@
-#include "..\..\game\camera\CameraController.h"
-#include "..\camera\Camera.h"
-#include "..\game\IGame.h"
-#include "..\network\Network.h"
-#include "..\platform\InputManager.h"
-#include "..\platform\Window.h"
-#include "..\scene\Scene.h"
 #include "Application.h"
-#include <GLFW/glfw3.h>
+#include "../camera/Camera.h"
+#include "../game/IGame.h"
+#include "../camera/ICameraController.h"
+#include "../network/Network.h"
+#include "../platform/InputManager.h"
+#include "../platform/Window.h"
+#include "../scene/Scene.h"
 #include <glad/glad.h>
+#define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
 #include <glm/vec3.hpp>
-#include <memory>
 #include <utility>
 
 Application::Application(int width, int height, const char* title) :
 	_input(std::make_unique<InputManager>()),
 	_camera(std::make_unique<Camera>(glm::vec3(0.0f, 1.0f, 4.0f))),
-	_cameraController(std::make_unique<CameraController>(_camera.get())),
 	_scene(std::make_unique<Scene>()),
 	_window(std::make_unique<Window>(width, height, title)),
 	_network(std::make_unique<Network>()) {
@@ -37,15 +36,21 @@ Application::~Application()
 	glfwTerminate();
 }
 
-bool Application::Init(std::unique_ptr<IGame> game)
+bool Application::Init(std::unique_ptr<IGame> game, std::unique_ptr<ICameraController> cameraController)
 {
 	if (!_window) return false;
+
+	if (cameraController) 
+	{
+		_cameraController = std::move(cameraController);
+		_cameraController->SetCamera(_camera.get());
+	}
 
 	if (game)
 	{
 		_game = std::move(game);
 
-		_game->SetCameraController(_cameraController.get());
+		if (_cameraController) _game->SetCameraController(_cameraController.get());
 		_game->SetCamera(_camera.get());
 		_game->SetNetwork(_network.get());
 
@@ -74,7 +79,7 @@ void Application::Render()
 
 void Application::Update(float deltaTime)
 {
-	_cameraController->Update(*_input, *_window, deltaTime);
+	if (_cameraController) _cameraController->Update(*_input, *_window, deltaTime);
 
 	if (_game) _game->OnUpdate(deltaTime, *_scene, *_input);
 

@@ -1,9 +1,7 @@
 #include "Camera.h"
 #include <algorithm>
-#include <cassert>
-#include <cmath>
+#include <stdexcept>
 #include <cstdlib>
-#include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
 Camera::Camera(glm::vec3 pos, glm::vec3 up, float yaw, float pitch, float speed, float sensitivity, float fov) :
@@ -29,8 +27,8 @@ glm::mat4 Camera::GetProjectionMatrix(float aspect) const
 
 void Camera::SetNearFar(float nearZ, float farZ)
 {
-	assert(nearZ > 0.0f && "[Camera] Ближняя граница видимости должна быть положительной");
-	assert(nearZ < farZ && "[Camera] Ближняя граница видимости должна быть меньше дальней");
+	if (nearZ <= 0.0f) throw std::invalid_argument("[Camera] Ближняя граница видимости должна быть положительной");
+	if (nearZ >= farZ) throw std::invalid_argument("[Camera] Ближняя граница видимости должна быть меньше дальней");
 
 	_nearZ = nearZ;
 	_farZ = farZ;

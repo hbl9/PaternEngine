@@ -1,17 +1,17 @@
 #include "ShaderProgram.h"
-#include <assert.h>
+#include <glm/gtc/type_ptr.hpp>
+#include <stdexcept>
+#include <sstream>
+#include <fstream>
 
-ShaderProgram::ShaderProgram(const char* vertexPath, const char* fragmentPath)
-{
-	LoadFromFiles(vertexPath, fragmentPath);
-}
+ShaderProgram::ShaderProgram(const std::string& vertexPath, const std::string& fragmentPath)
+{ LoadFromFiles(vertexPath, fragmentPath); }
 
 ShaderProgram::~ShaderProgram() { Destroy(); }
 
-ShaderProgram::ShaderProgram(ShaderProgram&& other) noexcept : _id(other._id), _uniformCache(std::move(other._uniformCache))
-{
-	other._id = 0;
-}
+ShaderProgram::ShaderProgram(ShaderProgram&& other) noexcept
+	: _id(other._id), _uniformCache(std::move(other._uniformCache)), _vertexPath(std::move(other._vertexPath)), _fragmentPath(std::move(other._fragmentPath))
+{ other._id = 0; }
 
 ShaderProgram& ShaderProgram::operator=(ShaderProgram&& other) noexcept
 {
@@ -19,51 +19,34 @@ ShaderProgram& ShaderProgram::operator=(ShaderProgram&& other) noexcept
 	{
 		Destroy();
 		_uniformCache = std::move(other._uniformCache);
+		_vertexPath = std::move(other._vertexPath);
+		_fragmentPath = std::move(other._fragmentPath);
 		_id = other._id;
 		other._id = 0;
 	}
 	return *this;
 }
 
-void ShaderProgram::LoadFromFiles(const char* vertexPath, const char* fragmentPath)
+void ShaderProgram::LoadFromFiles(const std::string& vertexPath, const std::string& fragmentPath)
 {
 	std::string vsSrc = ReadFile(vertexPath);
 	std::string fsSrc = ReadFile(fragmentPath);
 
-	if (vsSrc.empty())
-	{
-		std::cout << "[SP] Ошибка чтения файла: " << vertexPath << '\n';
-		return;
-	}
-	if (fsSrc.empty())
-	{
-		std::cout << "[SP] Ошибка чтения файла: " << fragmentPath << '\n';
-		return;
-	}
+	if (vsSrc.empty()) throw std::invalid_argument("[SP] Ошибка чтения файла: " + vertexPath);
+	if (fsSrc.empty()) throw std::invalid_argument("[SP] Ошибка чтения файла: " + fragmentPath);
 
 	_vertexPath = vertexPath;
 	_fragmentPath = fragmentPath;
 
 	GLuint vs = CompileShader(GL_VERTEX_SHADER, vsSrc.c_str(), vertexPath);
 	GLuint fs = CompileShader(GL_FRAGMENT_SHADER, fsSrc.c_str(), fragmentPath);
-	if (!vs || !fs)
-	{
-		glDeleteShader(vs);
-		glDeleteShader(fs);
-		std::cout << "[SP] Ошибка компиляции шейдеров\n";
-		return;
-	}
 
 	GLuint program = LinkProgram(vs, fs);
 
 	glDeleteShader(vs);
 	glDeleteShader(fs);
 
-	if (!program)
-	{
-		std::cout << "[SP] Ошибка линковки шейдеров\n";
-		return;
-	}
+	if (!program) throw std::runtime_error("[SP] Ошибка линковки шейдеров");
 
 	Destroy();
 	_id = program;
@@ -77,11 +60,12 @@ GLuint ShaderProgram::GetID() const { return _id; }
 
 bool ShaderProgram::IsValid() const { return _id; }
 
-GLuint ShaderProgram::CompileShader(GLenum type, const char* src, const char* path)
+GLuint ShaderProgram::CompileShader(GLenum type, const std::string& src, const std::string& path)
 {
 	GLuint shader = glCreateShader(type);
 
-	glShaderSource(shader, 1, &src, nullptr);
+	auto srcC = src.c_str();
+	glShaderSource(shader, 1, &srcC, nullptr);
 	glCompileShader(shader);
 
 	int success = 0;
@@ -89,12 +73,10 @@ GLuint ShaderProgram::CompileShader(GLenum type, const char* src, const char* pa
 
 	if (!success)
 	{
-		char infoLog[512];
-		glGetShaderInfoLog(shader, 512, nullptr, infoLog);
-		std::cerr << "[SP] Ошибка компиляции шейдера: " << path << '\n' << infoLog << "\n";
-
+		char infoLog[512] = {};
+		glGetShaderInfoLog(shader, sizeof(infoLog), nullptr, infoLog);
 		glDeleteShader(shader);
-		return 0;
+		throw std::runtime_error("[SP] Ошибка компиляции шейдера: " + path + '\n' + infoLog);
 	}
 
 	return shader;
@@ -141,94 +123,83 @@ GLuint ShaderProgram::LinkProgram(GLuint vertex, GLuint fragment)
 	glGetProgramiv(program, GL_LINK_STATUS, &success);
 	if (!success)
 	{
-		char infoLog[512];
-		glGetProgramInfoLog(program, 512, nullptr, infoLog);
-		std::cerr << "[SP] Ошибка линковки программы:\n" << infoLog << "\n";
-
+		char infoLog[512] = {};
+		glGetProgramInfoLog(program, sizeof(infoLog), nullptr, infoLog);
 		glDeleteProgram(program);
-		return 0;
+		throw std::runtime_error("[SP] Ошибка линковки программы:\n" + std::string(infoLog));
 	}
 	return program;
 }
 
-std::string ShaderProgram::ReadFile(const char* path)
+std::string ShaderProgram::ReadFile(const std::string& path)
 {
 	std::ifstream file(path);
 	std::stringstream ss;
 
-	if (!file.is_open())
-	{
-		std::cerr << "[SP] Не удалось открыть файл: " << path << '\n';
-		return {};
-	}
+	if (!file.is_open()) throw std::runtime_error("[SP] Не удалось открыть файл: " + path);
 
 	ss << file.rdbuf();
 
 	return std::string(ss.str());
 }
 
-void ShaderProgram::SendMat4(const char* name, const glm::mat4& v) const
+void ShaderProgram::SendMat4(const std::string& name, const glm::mat4& v) const
 {
 	GLint id = 0;
-	if (FindUniform(name, id))
-		glUniformMatrix4fv(id, 1, GL_FALSE, glm::value_ptr(v));
+	FindUniform(name, id);
+	glUniformMatrix4fv(id, 1, GL_FALSE, glm::value_ptr(v));
 }
 
-void ShaderProgram::SendMat3(const char* name, const glm::mat3& v) const
+void ShaderProgram::SendMat3(const std::string& name, const glm::mat3& v) const
 {
 	GLint id = 0;
-	if (FindUniform(name, id))
-		glUniformMatrix3fv(id, 1, GL_FALSE, glm::value_ptr(v));
+	FindUniform(name, id);
+	glUniformMatrix3fv(id, 1, GL_FALSE, glm::value_ptr(v));
 }
 
-void ShaderProgram::SendVec4(const char* name, const glm::vec4& v) const
+void ShaderProgram::SendVec4(const std::string& name, const glm::vec4& v) const
 {
 	GLint id = 0;
-	if (FindUniform(name, id))
-		glUniform4fv(id, 1, glm::value_ptr(v));
+	FindUniform(name, id);
+	glUniform4fv(id, 1, glm::value_ptr(v));
 }
 
-void ShaderProgram::SendVec3(const char* name, const glm::vec3& v) const
+void ShaderProgram::SendVec3(const std::string& name, const glm::vec3& v) const
 {
 	GLint id = 0;
-	if (FindUniform(name, id))
-		glUniform3fv(id, 1, glm::value_ptr(v));
+	FindUniform(name, id);
+	glUniform3fv(id, 1, glm::value_ptr(v));
 }
 
-void ShaderProgram::SendVec2(const char* name, const glm::vec2& v) const
+void ShaderProgram::SendVec2(const std::string& name, const glm::vec2& v) const
 {
 	GLint id = 0;
-	if (FindUniform(name, id))
-		glUniform2fv(id, 1, glm::value_ptr(v));
+	FindUniform(name, id);
+	glUniform2fv(id, 1, glm::value_ptr(v));
 }
 
-void ShaderProgram::SendFloat(const char* name, const float v) const
+void ShaderProgram::SendFloat(const std::string& name, const float v) const
 {
 	GLint id = 0;
-	if (FindUniform(name, id))
-		glUniform1f(id, v);
+	FindUniform(name, id);
+	glUniform1f(id, v);
 }
 
-void ShaderProgram::SendInt(const char* name, const int v) const
+void ShaderProgram::SendInt(const std::string& name, const int v) const
 {
 	GLint id = 0;
-	if (FindUniform(name, id))
-		glUniform1i(id, v);
+	FindUniform(name, id);
+	glUniform1i(id, v);
 }
 
-void ShaderProgram::SendBool(const char* name, const bool v) const { SendInt(name, static_cast<int>(v)); }
+void ShaderProgram::SendBool(const std::string& name, const bool v) const { SendInt(name, static_cast<int>(v)); }
 
-bool ShaderProgram::FindUniform(const char* name, GLint& id) const
+void ShaderProgram::FindUniform(const std::string& name, GLint& id) const
 {
 	auto u = _uniformCache.find(name);
 	if (u == _uniformCache.end())
-	{
-		std::cerr << "[SP] Не найден uniform: " << name << " для шейдеров - " << _vertexPath << " " << _fragmentPath << "\n";
-		id = 0;
-		return false;
-	}
+		throw std::runtime_error("[SP] Не найден uniform: " + name + " для шейдеров - " + _vertexPath + ' ' + _fragmentPath);
 	id = u->second.location;
-	return true;
 }
 
 void ShaderProgram::Destroy()
@@ -237,6 +208,8 @@ void ShaderProgram::Destroy()
 	{
 		glDeleteProgram(_id);
 		_uniformCache.clear();
+		_vertexPath.clear();
+		_fragmentPath.clear();
 		_id = 0;
 	}
 }

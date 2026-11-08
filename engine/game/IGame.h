@@ -13,6 +13,7 @@ public:
 
 	virtual void OnInit(Scene&) = 0;
 	virtual void OnUpdate(float dt, Scene&, InputManager&) = 0;
+	virtual void OnShutdown() = 0;
 
 	void SetCamera(Camera* cam) { _camera = cam; }
 	void SetNetwork(Network* net) { _network = net; }

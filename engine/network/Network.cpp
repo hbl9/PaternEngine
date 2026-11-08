@@ -1,12 +1,9 @@
 #include "Network.h"
 
 #include <WS2tcpip.h>
-#include <WinSock2.h>
-#include <Windows.h>
 #include <chrono>
-#include <cstdint>
 #include <iostream>
-#include <string>
+#include <cstring>
 
 Network::Network()
 {
@@ -23,7 +20,7 @@ Network::~Network()
 
 double Network::Now() const { return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
 
-bool Network::StartHost(uint16_t port)
+bool Network::StartHost(std::uint16_t port)
 {
 	CloseSocket();
 
@@ -56,7 +53,7 @@ bool Network::StartHost(uint16_t port)
 	return true;
 }
 
-bool Network::StartClient(const std::string& hostIp, uint16_t port)
+bool Network::StartClient(const std::string& hostIp, std::uint16_t port)
 {
 	CloseSocket();
 
@@ -87,7 +84,7 @@ bool Network::StartClient(const std::string& hostIp, uint16_t port)
 	std::cout << "[Network] Connecting -> " << hostIp << ':' << port << '\n';
 
 	// Hello: request an ID
-	uint8_t buf[4];
+	std::uint8_t buf[4];
 	std::memcpy(buf, &SYS_MAGIC_HELLO, 4);
 	SendRaw(buf, 4, _serverAddr);
 
@@ -121,7 +118,7 @@ void Network::Poll(NetworkEvents& outEvents)
 {
 	if (IsRunning())
 	{
-		uint8_t buf[1024];
+		std::uint8_t buf[1024];
 
 		while (true)
 		{
@@ -129,7 +126,7 @@ void Network::Poll(NetworkEvents& outEvents)
 			int fromLen = sizeof(from);
 			int n = recvfrom(_socket, reinterpret_cast<char*>(buf), sizeof(buf), 0, reinterpret_cast<sockaddr*>(&from), &fromLen);
 			if (n <= 0) break;
-			
+
 			if (!_isHost && from.sin_addr.s_addr == _serverAddr.sin_addr.s_addr && from.sin_port == _serverAddr.sin_port)
 				_lastHostPacketTime = Now();
 
@@ -159,7 +156,7 @@ void Network::Poll(NetworkEvents& outEvents)
 
 void Network::PollDisconnects(NetworkEvents& outEvents)
 {
-	if (!_isHost && IsRunning())
+	if (_isHost && IsRunning())
 	{
 		double now = Now();
 		auto p = _peers.begin();
@@ -170,7 +167,7 @@ void Network::PollDisconnects(NetworkEvents& outEvents)
 				std::cout << "[Network] Client ID=" << p->id << " timed out\n";
 				outEvents.peerDisconnected.push_back(p->id);
 
-				uint8_t b[8];
+				std::uint8_t b[8];
 				std::memcpy(b, &SYS_MAGIC_DISCONNECT, 4);
 				std::memcpy(b + 4, &p->id, 4);
 				for (auto& it : _peers)
@@ -185,9 +182,9 @@ void Network::PollDisconnects(NetworkEvents& outEvents)
 	}
 }
 
-bool Network::HandleSystemPacket(const uint8_t* buf, int n, const sockaddr_in& from, NetworkEvents& outEvents)
+bool Network::HandleSystemPacket(const std::uint8_t* buf, int n, const sockaddr_in& from, NetworkEvents& outEvents)
 {
-	uint32_t magic = 0;
+	std::uint32_t magic = 0;
 	std::memcpy(&magic, buf, 4);
 
 	if (magic == SYS_MAGIC_HELLO)
@@ -199,7 +196,7 @@ bool Network::HandleSystemPacket(const uint8_t* buf, int n, const sockaddr_in& f
 	{
 		if (_isHost || n < 8) return true;
 
-		uint32_t id = 0;
+		std::uint32_t id = 0;
 		std::memcpy(&id, buf + 4, 4);
 		if (_localId == INVALID_ID)
 		{
@@ -213,7 +210,7 @@ bool Network::HandleSystemPacket(const uint8_t* buf, int n, const sockaddr_in& f
 	{
 		if (n < 8) return true;
 
-		uint32_t leftId = 0;
+		std::uint32_t leftId = 0;
 		std::memcpy(&leftId, buf + 4, 4);
 		outEvents.peerDisconnected.push_back(leftId);
 
@@ -222,7 +219,7 @@ bool Network::HandleSystemPacket(const uint8_t* buf, int n, const sockaddr_in& f
 			for (auto p = _peers.begin(); p != _peers.end(); p++)
 				if (p->id == leftId)
 				{
-					uint8_t b[8];
+					std::uint8_t b[8];
 					std::memcpy(b, &SYS_MAGIC_DISCONNECT, 4);
 					std::memcpy(b + 4, &leftId, 4);
 					for (auto& it : _peers)
@@ -251,7 +248,7 @@ Network::Peer* Network::FindOrRegisterPeer(const sockaddr_in& from, NetworkEvent
 	std::cout << "[Network] New Client, ID=" << pr.id << '\n';
 	outEvents.peerConnected.push_back(pr.id);
 
-	uint8_t b[8];
+	std::uint8_t b[8];
 	std::memcpy(b, &SYS_MAGIC_ASSIGN, 4);
 	std::memcpy(b + 4, &pr.id, 4);
 	SendRaw(b, 8, from);
@@ -260,8 +257,8 @@ Network::Peer* Network::FindOrRegisterPeer(const sockaddr_in& from, NetworkEvent
 }
 
 void Network::SendToHost(const void* data, std::size_t size) { if (IsRunning() && !IsHost()) SendRaw(data, static_cast<int>(size), _serverAddr); }
-void Network::SendToHost(std::span<const uint8_t> bytes) { SendToHost(bytes.data(), bytes.size()); }
-void Network::SendToPeer(uint32_t peerId, const void* data, std::size_t size)
+void Network::SendToHost(std::span<const std::uint8_t> bytes) { SendToHost(bytes.data(), bytes.size()); }
+void Network::SendToPeer(std::uint32_t peerId, const void* data, std::size_t size)
 {
 	if (IsRunning() && _isHost)
 		for (auto& p : _peers)
@@ -271,7 +268,7 @@ void Network::SendToPeer(uint32_t peerId, const void* data, std::size_t size)
 				return;
 			}
 }
-void Network::SendToPeer(uint32_t peerId, std::span<const uint8_t> bytes) { SendToPeer(peerId, bytes.data(), bytes.size()); }
+void Network::SendToPeer(std::uint32_t peerId, std::span<const std::uint8_t> bytes) { SendToPeer(peerId, bytes.data(), bytes.size()); }
 void Network::BroadcastToPeers(const void* data, std::size_t size)
 {
 	if (IsRunning())
@@ -281,12 +278,12 @@ void Network::BroadcastToPeers(const void* data, std::size_t size)
 		else
 			SendRaw(data, static_cast<int>(size), _serverAddr);
 }
-void Network::BroadcastToPeers(std::span<const uint8_t> bytes) { BroadcastToPeers(bytes.data(), bytes.size()); }
-void Network::BroadcastDisconnect(uint32_t leftId)
+void Network::BroadcastToPeers(std::span<const std::uint8_t> bytes) { BroadcastToPeers(bytes.data(), bytes.size()); }
+void Network::BroadcastDisconnect(std::uint32_t leftId)
 {
 	if (IsRunning())
 	{
-		uint8_t b[8];
+		std::uint8_t b[8];
 		std::memcpy(b, &SYS_MAGIC_DISCONNECT, 4);
 		std::memcpy(b + 4, &leftId, 4);
 
@@ -301,7 +298,7 @@ void Network::BroadcastDisconnect(uint32_t leftId)
 bool Network::IsHost() const { return _isHost; }
 bool Network::IsRunning() const { return _socket != INVALID_SOCKET; }
 
-uint32_t Network::GetLocalId() const { return _localId; }
+std::uint32_t Network::GetLocalId() const { return _localId; }
 
 void Network::CloseSocket()
 {
@@ -314,4 +311,6 @@ void Network::CloseSocket()
 }
 
 void Network::SendRaw(const void* data, int size, const sockaddr_in& to)
-{ if (IsRunning()) sendto(_socket, reinterpret_cast<const char*>(data), size, 0, reinterpret_cast<const sockaddr*>(&to), sizeof(to)); }
+{
+	if (IsRunning()) sendto(_socket, reinterpret_cast<const char*>(data), size, 0, reinterpret_cast<const sockaddr*>(&to), sizeof(to));
+}

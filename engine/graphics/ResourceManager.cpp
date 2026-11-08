@@ -1,24 +1,20 @@
 #include "ResourceManager.h"
+#include "ShaderProgram.h"
+#include "MeshFactory.h"
+#include "Mesh.h"
+#include <stdexcept>
 
 Mesh* ResourceManager::GetMesh(const std::string& name) const
 {
 	auto mesh = _meshes.find(name);
-	if (mesh == _meshes.end())
-	{
-		std::cout << "[ResourceManager] Mesh не найден: " << name << '\n';
-		return nullptr;
-	}
+	if (mesh == _meshes.end()) throw std::invalid_argument("[ResourceManager] Mesh не найден: " + name);
 	return mesh->second.get();
 }
 
 ShaderProgram* ResourceManager::GetShader(const std::string& name) const
 {
 	auto shader = _shaders.find(name);
-	if (shader == _shaders.end())
-	{
-		std::cout << "[ResourceManager] Shader не найден: " << name << '\n';
-		return nullptr;
-	}
+	if (shader == _shaders.end()) throw std::invalid_argument("[ResourceManager] Shader не найден: " + name);
 	return shader->second.get();
 }
 
@@ -39,11 +35,7 @@ ShaderProgram* ResourceManager::CreateShader(const std::string& name, const char
 	if (temp != _shaders.end()) return temp->second.get();
 
 	auto shader = std::make_unique<ShaderProgram>(vertexPath, fragmentPath);
-	if (!shader->IsValid())
-	{
-		std::cout << "[ResourceManager] Ошибка шейдера: " << name << '\n';
-		return nullptr;
-	}
+	if (!shader->IsValid()) throw std::invalid_argument("[ResourceManager] Ошибка шейдера: " + name);
 	_shaders[name] = std::move(shader);
 	return _shaders[name].get();
 }

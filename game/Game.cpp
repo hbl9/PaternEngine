@@ -1,18 +1,15 @@
-#include "..\engine\graphics\MeshFactory.h"
-#include "..\engine\network\Network.h"
-#include "..\engine\scene\Scene.h"
 #include "Game.h"
+#include "../engine/camera/ICameraController.h"
+#include "../engine/graphics/MeshFactory.h"
+#include "../engine/graphics/ResourceManager.h"
+#include "../engine/network/Network.h"
+#include "../engine/scene/SceneObject.h"
+#include "../engine/scene/Scene.h"
 #include "network/GameProtocol.h"
+#include <iostream>
 
-Game::Game(bool isHost, const char* connectIp) :
-	_isHost(isHost), _connectIp(connectIp ? connectIp : "") {
-}
-
-Game::~Game()
-{
-	if (_network && _network->IsRunning())
-		_network->BroadcastDisconnect(_network->GetLocalId());
-}
+Game::Game(bool isHost, const char* connectIp) : _isHost(isHost), _connectIp(connectIp ? connectIp : "") {}
+Game::~Game() { if (_network && _network->IsRunning()) _network->BroadcastDisconnect(_network->GetLocalId()); }
 
 void Game::OnInit(Scene& scene)
 {
@@ -56,7 +53,7 @@ void Game::OnUpdate(float deltaTime, Scene& scene, InputManager& im)
 		_network->Update(deltaTime, ne);
 
 		// Disconnects
-		for (uint32_t id : ne.peerDisconnected)
+		for (std::uint32_t id : ne.peerDisconnected)
 			RemoveRemotePlayer(scene, id);
 
 		// Receiving
@@ -77,9 +74,14 @@ void Game::OnUpdate(float deltaTime, Scene& scene, InputManager& im)
 	}
 }
 
+void Game::OnShutdown()
+{
+	// For save before close game
+}
+
 void Game::SendLocalState()
 {
-	uint32_t id = _network->GetLocalId();
+	std::uint32_t id = _network->GetLocalId();
 	if (id == Network::INVALID_ID) return;
 	PlayerState ps;
 	ps.id = id;
@@ -87,7 +89,7 @@ void Game::SendLocalState()
 	ps.yaw = _cameraController->GetYaw();
 	ps.pitch = _cameraController->GetPitch();
 
-	std::vector<uint8_t> bytes = GameProtocol::SerializeState(ps);
+	std::vector<std::uint8_t> bytes = GameProtocol::SerializeState(ps);
 	_network->BroadcastToPeers(bytes);
 }
 
@@ -110,7 +112,7 @@ void Game::ApplyRemoteState(Scene& scene, const PlayerState& ps)
 	}
 }
 
-void Game::RemoveRemotePlayer(Scene& scene, uint32_t id)
+void Game::RemoveRemotePlayer(Scene& scene, std::uint32_t id)
 {
 	auto rp = _remotePlayers.find(id);
 	if (rp != _remotePlayers.end())

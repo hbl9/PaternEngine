@@ -1,30 +1,26 @@
 #include "Window.h"
 
+#define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
+#include <glad/glad.h>
+#include <stdexcept>
+
 Window::Window(int width, int height, const char* title, GLFWmonitor* monitor, GLFWwindow* share, FrameRateMode frameRateMode)
 {
-	if (!glfwInit())
-	{
-		std::cout << "Ошибка инициализации GLFW\n";
-		return;
-	}
+	if (!glfwInit()) throw std::runtime_error("Ошибка инициализации GLFW");
 
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	GLFWwindow* window = glfwCreateWindow(width, height, title, monitor, share);
-	if (!window)
-	{
-		std::cout << "Ошибка создания окна\n";
-		glfwTerminate();
-		return;
-	}
+	if (!window) throw std::runtime_error("Ошибка создания окна");
 
 	_window = window;
 
 	glfwMakeContextCurrent(_window);
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
-		std::cout << "Ошибка загрузки указателей на функции OpenGL\n";
+		throw std::runtime_error("Ошибка загрузки указателей на функции OpenGL");
 
 	glViewport(0, 0, width, height);
 
@@ -56,7 +52,7 @@ void Window::SetGLClearColor(GLfloat r, GLfloat g, GLfloat b, GLfloat a) { glCle
 void Window::UpdateFrameBufferSize() { glfwGetFramebufferSize(_window, &_width, &_height); }
 
 GLFWwindow* Window::GetWindow() const { return _window; }
-glm::ivec2 Window::GetSizeWindow() { return glm::ivec2(_width, _height); }
+glm::ivec2 Window::GetSizeWindow() const { return glm::ivec2(_width, _height); }
 float Window::GetAspectRatio() const { return _height == 0 ? 1 : _width / static_cast<float>(_height); }
 
 void Window::PollEvents() { glfwPollEvents(); }
@@ -72,4 +68,4 @@ void Window::Destroy()
 	}
 }
 
-bool Window::ShouldClose() { return glfwWindowShouldClose(_window); }
+bool Window::ShouldClose() const { return glfwWindowShouldClose(_window); }

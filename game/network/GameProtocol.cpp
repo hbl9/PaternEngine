@@ -2,9 +2,9 @@
 
 namespace GameProtocol
 {
-	std::vector<uint8_t> SerializeState(const PlayerState& ps)
+	std::vector<std::uint8_t> SerializeState(const PlayerState& ps)
 	{
-		std::vector<uint8_t> buf(STATE_PACKET_SIZE);
+		std::vector<std::uint8_t> buf(STATE_PACKET_SIZE);
 		std::size_t off = 0;
 
 		std::memcpy(buf.data() + off, &MAGIC, 4); off += 4;
@@ -18,11 +18,11 @@ namespace GameProtocol
 		return buf;
 	}
 
-	bool DeserializeState(const uint8_t* data, size_t size, PlayerState& outState)
+	bool DeserializeState(const std::uint8_t* data, std::size_t size, PlayerState& outState)
 	{
 		if (size >= STATE_PACKET_SIZE)
 		{
-			uint32_t magic = 0;
+			std::uint32_t magic = 0;
 			std::memcpy(&magic, data, 4);
 
 			if (magic == MAGIC)
@@ -40,5 +40,5 @@ namespace GameProtocol
 		}
 		return false;
 	}
-	bool DeserializeState(std::span<const uint8_t> bytes, PlayerState& outState) { return DeserializeState(bytes.data(), bytes.size(), outState); }
+	bool DeserializeState(std::span<const std::uint8_t> bytes, PlayerState& outState) { return DeserializeState(bytes.data(), bytes.size(), outState); }
 }

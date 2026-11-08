@@ -1,14 +1,19 @@
 #pragma once
 
-#include "..\graphics\Mesh.h"
-#include "..\graphics\ShaderProgram.h"
+#include <glm/gtc/quaternion.hpp>
+#include <glm/mat3x3.hpp>
+#include <glm/mat4x4.hpp>
+#include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
-#include <glm/fwd.hpp>
-#include <memory>
-#include <string>
+#include <glm/vec4.hpp>
 #include <unordered_map>
 #include <variant>
+#include <memory>
+#include <string>
 #include <vector>
+
+class ShaderProgram;
+class Mesh;
 
 struct Material
 {
