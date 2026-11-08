@@ -33,6 +33,7 @@
     <ClCompile Include="engine\scene\SceneObject.cpp" />
     <ClCompile Include="game\camera\CameraController.cpp" />
     <ClCompile Include="game\Game.cpp" />
+    <ClCompile Include="game\network\GameProtocol.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="engine\camera\Camera.h" />
@@ -50,6 +51,7 @@
     <ClInclude Include="engine\scene\SceneObject.h" />
     <ClInclude Include="game\camera\CameraController.h" />
     <ClInclude Include="game\Game.h" />
+    <ClInclude Include="game\network\GameProtocol.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>18.0</VCProjectVersion>

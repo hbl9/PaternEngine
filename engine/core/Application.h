@@ -21,13 +21,13 @@ public:
 	void Run();
 
 private:
+	std::unique_ptr<IGame>			  _game = nullptr;
 	std::unique_ptr<InputManager>	  _input = nullptr;
 	std::unique_ptr<Camera>			  _camera = nullptr;
 	std::unique_ptr<ICameraController> _cameraController = nullptr;
 	std::unique_ptr<Scene>			  _scene = nullptr;
 	std::unique_ptr<Window>			  _window = nullptr;
 	std::unique_ptr<Network>		  _network = nullptr;
-	std::unique_ptr<IGame>			  _game = nullptr;
 
 	float _lastFrame = 0.0f;
 

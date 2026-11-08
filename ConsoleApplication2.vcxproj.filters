@@ -70,6 +70,12 @@
     <Filter Include="Файлы заголовков\engine\network">
       <UniqueIdentifier>{8d2f9f3e-6b0d-4877-981b-7c9050eb24b6}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Файлы заголовков\game\network">
+      <UniqueIdentifier>{e1dcab5d-a143-4ce6-afa7-f755a45a827b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Исходные файлы\game\network">
+      <UniqueIdentifier>{84bae1d3-de44-4dcb-afa5-bd4e4def46ba}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="engine\core\main.cpp">
@@ -113,6 +119,9 @@
     </ClCompile>
     <ClCompile Include="engine\camera\Camera.cpp">
       <Filter>Исходные файлы\engine\camera</Filter>
+    </ClCompile>
+    <ClCompile Include="game\network\GameProtocol.cpp">
+      <Filter>Исходные файлы\game\network</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -160,6 +169,9 @@
     </ClInclude>
     <ClInclude Include="game\Game.h">
       <Filter>Файлы заголовков\game</Filter>
+    </ClInclude>
+    <ClInclude Include="game\network\GameProtocol.h">
+      <Filter>Файлы заголовков\game\network</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

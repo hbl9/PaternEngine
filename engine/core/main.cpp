@@ -1,5 +1,7 @@
 ﻿#include "..\..\game\Game.h"
 #include "Application.h"
+#include <clocale>
+#include <iostream>
 
 int main(int argc, char** argv)
 {

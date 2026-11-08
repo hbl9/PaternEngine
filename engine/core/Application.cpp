@@ -23,10 +23,8 @@ Application::Application(int width, int height, const char* title) :
 
 Application::~Application()
 {
-	if (_network && _network->IsRunning())
-		_network->BroadcastDisconnect(_network->GetLocalId());
-
 	_game.reset();
+	_network.reset();
 	_scene.reset();
 
 	if (_window && _window->GetWindow())
@@ -68,8 +66,6 @@ bool Application::Init(std::unique_ptr<IGame> game)
 void Application::Render()
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	if (_game) _game->OnRender();
 
 	_scene->Draw(_camera->GetViewMatrix(), _camera->GetProjectionMatrix(_window->GetAspectRatio()));
 

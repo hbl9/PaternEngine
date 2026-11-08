@@ -1,21 +1,18 @@
-#include "network.h"
+#include "Network.h"
+
 #include <WS2tcpip.h>
 #include <WinSock2.h>
 #include <Windows.h>
 #include <chrono>
 #include <cstdint>
-#include <glm/fwd.hpp>
 #include <iostream>
 #include <string>
-#include <string.h>
-#include <vector>
-#include <ws2def.h>
 
 Network::Network()
 {
 	WSADATA wsa;
 	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
-		std::cout << "[Net] Ошибка WSAStartup\n";
+		std::cout << "[Network] Error WSAStartup\n";
 }
 
 Network::~Network()
@@ -24,34 +21,7 @@ Network::~Network()
 	WSACleanup();
 }
 
-void Network::Update(float deltaTime, const PlayerState& localState, NetworkEvents& outEvents)
-{
-	if (IsRunning())
-	{
-		outEvents.remoteStates.clear();
-		outEvents.disconnects.clear();
-		_sendTimer += deltaTime;
-		Poll(outEvents.remoteStates, outEvents.disconnects);
-
-		if (_isHost) PollDisconnects(outEvents.disconnects);
-		else if (!_hostTimedOut && Now() - _lastHostPacketTime > CLIENT_TIMEOUT)
-		{
-			std::cout << "[Net] Хост перестал отвечать на запросы\n";
-			_hostTimedOut = true;
-			outEvents.disconnects.push_back(0);
-		}
-		if (_sendTimer >= 1.0f / 30.0f)  // 30 раз в секунду
-		{
-			_sendTimer = 0.0f;
-			SendLocalState(localState);
-		}
-	}
-}
-
-double Network::Now()
-{
-	return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
-}
+double Network::Now() const { return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
 
 bool Network::StartHost(uint16_t port)
 {
@@ -60,7 +30,7 @@ bool Network::StartHost(uint16_t port)
 	_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (!IsRunning())
 	{
-		std::cout << "[Net] Ошибка socket()\n";
+		std::cout << "[Network] Error socket()\n";
 		return false;
 	}
 
@@ -69,9 +39,9 @@ bool Network::StartHost(uint16_t port)
 	addr.sin_addr.s_addr = INADDR_ANY;
 	addr.sin_port = htons(port);
 
-	if (bind(_socket, (sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR)
+	if (bind(_socket, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) == SOCKET_ERROR)
 	{
-		std::cout << "[Net] Ошибка bind(), возможно целевой порт занят\n";
+		std::cout << "[Network] Error bind(), maybe the target port is busy\n";
 		CloseSocket();
 		return false;
 	}
@@ -82,7 +52,7 @@ bool Network::StartHost(uint16_t port)
 	_isHost = true;
 	_localId = 0;
 
-	std::cout << "[Net] Хост включил порт " << port << '\n';
+	std::cout << "[Net] Host enable port: " << port << '\n';
 	return true;
 }
 
@@ -93,7 +63,7 @@ bool Network::StartClient(const std::string& hostIp, uint16_t port)
 	_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (!IsRunning())
 	{
-		std::cout << "[Net] Ошибка socket()\n";
+		std::cout << "[Network] Error socket()\n";
 		return false;
 	}
 
@@ -101,7 +71,7 @@ bool Network::StartClient(const std::string& hostIp, uint16_t port)
 	_serverAddr.sin_port = htons(port);
 	if (inet_pton(AF_INET, hostIp.c_str(), &_serverAddr.sin_addr) != 1)
 	{
-		std::cout << "[Net] Неверный IP: " << hostIp << '\n';
+		std::cout << "[Network] Incorrect IP: " << hostIp << '\n';
 		CloseSocket();
 		return false;
 	}
@@ -113,191 +83,222 @@ bool Network::StartClient(const std::string& hostIp, uint16_t port)
 	_localId = INVALID_ID;
 	_hostTimedOut = false;
 	_lastHostPacketTime = Now();
-	_sendTimer = 0.0f;
 
-	std::cout << "[Net] Подключение -> " << hostIp << ':' << port << '\n';
+	std::cout << "[Network] Connecting -> " << hostIp << ':' << port << '\n';
 
-	PlayerState hello;
-	hello.id = INVALID_ID;
-	SendLocalState(hello);
+	// Hello: request an ID
+	uint8_t buf[4];
+	std::memcpy(buf, &SYS_MAGIC_HELLO, 4);
+	SendRaw(buf, 4, _serverAddr);
 
 	return true;
 }
 
-void Network::SendLocalState(const PlayerState& local)
+void Network::Update(float deltaTime, NetworkEvents& outEvents)
 {
-	if (!IsRunning()) return;
+	outEvents.received.clear();
+	outEvents.peerDisconnected.clear();
+	outEvents.peerConnected.clear();
+	outEvents.hostTimeOut = false;
+	outEvents.idAssigned = false;
 
-	if (_isHost)
-		for (auto& p : _peers)
-			SendStateTo(local, p.addr);
-	else
-		SendStateTo(local, _serverAddr);
+	if (IsRunning())
+	{
+		Poll(outEvents);
+
+		if (_isHost) PollDisconnects(outEvents);
+		else if (!_hostTimedOut && Now() - _lastHostPacketTime > CLIENT_TIMEOUT)
+		{
+			std::cout << "[Network] The Host is not responding to requests\n";
+			_hostTimedOut = true;
+			outEvents.hostTimeOut = true;
+			outEvents.peerDisconnected.push_back(0);
+		}
+	}
 }
 
-void Network::Poll(std::vector<PlayerState>& outStates, std::vector<uint32_t>& outDisconnects)
+void Network::Poll(NetworkEvents& outEvents)
 {
-	if (!IsRunning()) return;
-
-	uint8_t buf[64];
-
-	while (true)
+	if (IsRunning())
 	{
-		sockaddr_in from{};
-		int fromLen = sizeof(from);
-		int n = recvfrom(_socket, (char*)buf, sizeof(buf), 0, (sockaddr*)&from, &fromLen);
-		if (n <= 0) break;
-		if (n < 8) continue;
+		uint8_t buf[1024];
 
-		uint32_t magic = 0, id = 0;
-		float x, y, z, yaw, pitch;
-		int off = 0;
-		memcpy(&magic, buf + off, 4); off += 4;
-
-		if (magic == MAGIC_DISCONNECT)
+		while (true)
 		{
-			uint32_t leftId = 0;
-			memcpy(&leftId, buf + 4, 4);
-			outDisconnects.push_back(leftId);
+			sockaddr_in from{};
+			int fromLen = sizeof(from);
+			int n = recvfrom(_socket, reinterpret_cast<char*>(buf), sizeof(buf), 0, reinterpret_cast<sockaddr*>(&from), &fromLen);
+			if (n <= 0) break;
+			
+			if (!_isHost && from.sin_addr.s_addr == _serverAddr.sin_addr.s_addr && from.sin_port == _serverAddr.sin_port)
+				_lastHostPacketTime = Now();
+
+			if (n < 4 || HandleSystemPacket(buf, n, from, outEvents)) continue;
+
+			RawPacket pkt;
+			pkt.data.assign(buf, buf + n);
+			pkt.fromId = 0;
 
 			if (_isHost)
-				for (auto peer = _peers.begin(); peer != _peers.end(); peer++)
-					if (peer->id == leftId)
+				for (auto& p : _peers)
+					if (p.addr.sin_addr.s_addr == from.sin_addr.s_addr && p.addr.sin_port == from.sin_port)
 					{
-						for (auto& p : _peers)
-						{
-							if (p.id == leftId) continue;
-
-							uint8_t b[8];
-							int o = 0;
-							memcpy(b + o, &MAGIC_DISCONNECT, 4); o += 4;
-							memcpy(b + o, &leftId, 4); o += 4;
-							SendRaw(b, o, p.addr);
-						}
-						_peers.erase(peer);
+						p.lastSeen = Now();
+						pkt.fromId = p.id;
 						break;
 					}
+			outEvents.received.push_back(std::move(pkt));
 
-			continue;
+			if (_isHost && pkt.fromId != 0)
+				for (auto& p : _peers)
+					if (p.id != pkt.fromId)
+						SendRaw(buf, n, p.addr);
 		}
+	}
+}
 
-		memcpy(&id, buf + off, 4); off += 4;
-		memcpy(&x, buf + off, 4); off += 4;
-		memcpy(&y, buf + off, 4); off += 4;
-		memcpy(&z, buf + off, 4); off += 4;
-		memcpy(&yaw, buf + off, 4); off += 4;
-		memcpy(&pitch, buf + off, 4); off += 4;
+void Network::PollDisconnects(NetworkEvents& outEvents)
+{
+	if (!_isHost && IsRunning())
+	{
+		double now = Now();
+		auto p = _peers.begin();
+		while (p != _peers.end())
+		{
+			if (now - p->lastSeen > CLIENT_TIMEOUT)
+			{
+				std::cout << "[Network] Client ID=" << p->id << " timed out\n";
+				outEvents.peerDisconnected.push_back(p->id);
 
-		if (magic != MAGIC || n < 28) continue;
+				uint8_t b[8];
+				std::memcpy(b, &SYS_MAGIC_DISCONNECT, 4);
+				std::memcpy(b + 4, &p->id, 4);
+				for (auto& it : _peers)
+					if (p->id != it.id)
+						SendRaw(b, 8, it.addr);
+
+				p = _peers.erase(p);
+			}
+			else
+				p++;
+		}
+	}
+}
+
+bool Network::HandleSystemPacket(const uint8_t* buf, int n, const sockaddr_in& from, NetworkEvents& outEvents)
+{
+	uint32_t magic = 0;
+	std::memcpy(&magic, buf, 4);
+
+	if (magic == SYS_MAGIC_HELLO)
+	{
+		if (_isHost) FindOrRegisterPeer(from, outEvents);
+		return true;
+	}
+	if (magic == SYS_MAGIC_ASSIGN)
+	{
+		if (_isHost || n < 8) return true;
+
+		uint32_t id = 0;
+		std::memcpy(&id, buf + 4, 4);
+		if (_localId == INVALID_ID)
+		{
+			_localId = id;
+			outEvents.idAssigned = true;
+			std::cout << "[Network] Assigned ID=" << _localId << '\n';
+		}
+		return true;
+	}
+	if (magic == SYS_MAGIC_DISCONNECT)
+	{
+		if (n < 8) return true;
+
+		uint32_t leftId = 0;
+		std::memcpy(&leftId, buf + 4, 4);
+		outEvents.peerDisconnected.push_back(leftId);
 
 		if (_isHost)
 		{
-			Peer* peer = nullptr;
-			for (auto& p : _peers)
-				if (p.addr.sin_addr.s_addr == from.sin_addr.s_addr && p.addr.sin_port == from.sin_port)
+			for (auto p = _peers.begin(); p != _peers.end(); p++)
+				if (p->id == leftId)
 				{
-					peer = &p;
+					uint8_t b[8];
+					std::memcpy(b, &SYS_MAGIC_DISCONNECT, 4);
+					std::memcpy(b + 4, &leftId, 4);
+					for (auto& it : _peers)
+						if (it.id != leftId)
+							SendRaw(b, 8, it.addr);
+					_peers.erase(p);
 					break;
 				}
-
-			if (!peer)
-			{
-				Peer pr;
-				pr.addr = from;
-				pr.id = _nextClientId++;
-				pr.lastSeen = Now();
-				_peers.push_back(pr);
-				peer = &_peers.back();
-				std::cout << "[Net] Новый пользователь, id=" << peer->id << '\n';
-			}
-			else
-				peer->lastSeen = Now();
-
-			PlayerState reply;
-			reply.id = peer->id;
-			reply.pos = glm::vec3(x, y, z);
-			reply.yaw = yaw;
-			reply.pitch = pitch;
-			SendStateTo(reply, from);
-
-			PlayerState st;
-			st.id = peer->id;
-			st.pos = glm::vec3(x, y, z);
-			st.yaw = yaw;
-			st.pitch = pitch;
-			outStates.push_back(st);
-
-			for (auto& p : _peers)
-			{
-				if (p.addr.sin_addr.s_addr == from.sin_addr.s_addr && p.addr.sin_port == from.sin_port)
-					continue;
-
-				PlayerState fwd;
-				fwd.id = peer->id;
-				fwd.pos = glm::vec3(x, y, z);
-				fwd.yaw = yaw;
-				fwd.pitch = pitch;
-				SendStateTo(fwd, p.addr);
-			}
 		}
-		else
-		{
-			if (_localId == INVALID_ID && id != INVALID_ID)
-			{
-				_localId = id;
-				std::cout << "[Net] Присвоен id=" << _localId << '\n';
-			}
-
-			_lastHostPacketTime = Now();
-
-			PlayerState st;
-			st.id = id;
-			st.pos = glm::vec3(x, y, z);
-			st.yaw = yaw;
-			st.pitch = pitch;
-			outStates.push_back(st);
-		}
+		return true;
 	}
+	return false;
 }
 
-void Network::PollDisconnects(std::vector<uint32_t>& outleftIds)
+Network::Peer* Network::FindOrRegisterPeer(const sockaddr_in& from, NetworkEvents& outEvents)
 {
-	if (!_isHost || !IsRunning()) return;
+	for (auto& p : _peers)
+		if (p.addr.sin_addr.s_addr == from.sin_addr.s_addr && p.addr.sin_port == from.sin_port)
+			return &p;
 
-	double now = Now();
-	auto p = _peers.begin();
-	while (p != _peers.end())
-	{
-		if (now - p->lastSeen > CLIENT_TIMEOUT)
-		{
-			std::cout << "[Net] Клиент id=" << p->id << " превышено время ожидания\n";
-			outleftIds.push_back(p->id);
-			BroadcastDisconnect(p->id);
-			p = _peers.erase(p);
-		}
-		else
-			p++;
-	}
+	Peer pr;
+	pr.addr = from;
+	pr.id = _nextClientId++;
+	pr.lastSeen = Now();
+	_peers.push_back(pr);
+	std::cout << "[Network] New Client, ID=" << pr.id << '\n';
+	outEvents.peerConnected.push_back(pr.id);
+
+	uint8_t b[8];
+	std::memcpy(b, &SYS_MAGIC_ASSIGN, 4);
+	std::memcpy(b + 4, &pr.id, 4);
+	SendRaw(b, 8, from);
+
+	return &_peers.back();
 }
 
-void Network::BroadcastDisconnect(uint32_t leftIds)
+void Network::SendToHost(const void* data, std::size_t size) { if (IsRunning() && !IsHost()) SendRaw(data, static_cast<int>(size), _serverAddr); }
+void Network::SendToHost(std::span<const uint8_t> bytes) { SendToHost(bytes.data(), bytes.size()); }
+void Network::SendToPeer(uint32_t peerId, const void* data, std::size_t size)
 {
-	if (!IsRunning()) return;
-
-	uint8_t buf[8];
-	int o = 0;
-	memcpy(buf + o, &MAGIC_DISCONNECT, 4); o += 4;
-	memcpy(buf + o, &leftIds, 4); o += 4;
-
-	if (_isHost)
+	if (IsRunning() && _isHost)
 		for (auto& p : _peers)
-			SendRaw(buf, o, p.addr);
-	else
-		SendRaw(buf, o, _serverAddr);
+			if (p.id == peerId)
+			{
+				SendRaw(data, static_cast<int>(size), p.addr);
+				return;
+			}
+}
+void Network::SendToPeer(uint32_t peerId, std::span<const uint8_t> bytes) { SendToPeer(peerId, bytes.data(), bytes.size()); }
+void Network::BroadcastToPeers(const void* data, std::size_t size)
+{
+	if (IsRunning())
+		if (_isHost)
+			for (auto& p : _peers)
+				SendRaw(data, static_cast<int>(size), p.addr);
+		else
+			SendRaw(data, static_cast<int>(size), _serverAddr);
+}
+void Network::BroadcastToPeers(std::span<const uint8_t> bytes) { BroadcastToPeers(bytes.data(), bytes.size()); }
+void Network::BroadcastDisconnect(uint32_t leftId)
+{
+	if (IsRunning())
+	{
+		uint8_t b[8];
+		std::memcpy(b, &SYS_MAGIC_DISCONNECT, 4);
+		std::memcpy(b + 4, &leftId, 4);
+
+		if (_isHost)
+			for (auto& p : _peers)
+				SendRaw(b, 8, p.addr);
+		else
+			SendRaw(b, 8, _serverAddr);
+	}
 }
 
 bool Network::IsHost() const { return _isHost; }
-bool Network::IsClient() const { return !_isHost; }
 bool Network::IsRunning() const { return _socket != INVALID_SOCKET; }
 
 uint32_t Network::GetLocalId() const { return _localId; }
@@ -313,22 +314,4 @@ void Network::CloseSocket()
 }
 
 void Network::SendRaw(const void* data, int size, const sockaddr_in& to)
-{
-	if (IsRunning()) sendto(_socket, (const char*)data, size, 0, (const sockaddr*)&to, sizeof(to));
-}
-
-void Network::SendStateTo(const PlayerState& st, const sockaddr_in& to)
-{
-	uint8_t buf[28];
-	int off = 0;
-
-	memcpy(buf + off, &MAGIC, 4); off += 4;
-	memcpy(buf + off, &st.id, 4); off += 4;
-	memcpy(buf + off, &st.pos.x, 4); off += 4;
-	memcpy(buf + off, &st.pos.y, 4); off += 4;
-	memcpy(buf + off, &st.pos.z, 4); off += 4;
-	memcpy(buf + off, &st.yaw, 4); off += 4;
-	memcpy(buf + off, &st.pitch, 4); off += 4;
-
-	SendRaw(buf, off, to);
-}
+{ if (IsRunning()) sendto(_socket, reinterpret_cast<const char*>(data), size, 0, reinterpret_cast<const sockaddr*>(&to), sizeof(to)); }
