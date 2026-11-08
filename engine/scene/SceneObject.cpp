@@ -72,8 +72,8 @@ void SceneObject::Move(float x, float y, float z) { Move(glm::vec3(x, y, z)); }
 void SceneObject::Draw(const glm::mat4& view, const glm::mat4& projection) const
 {
 	if (_isNothing) return;
-	if (!_material->Shader || !_material->Shader->IsValid()) throw std::runtime_error("Невалидный Shader");
-	if (!_mesh) throw std::runtime_error("Невалидный Mesh");
+	if (!_material->Shader || !_material->Shader->IsValid()) throw std::runtime_error("Invalid Shader");
+	if (!_mesh) throw std::runtime_error("Invalid Mesh");
 
 	if (_dirty) CalculateObject();
 

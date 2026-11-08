@@ -30,9 +30,9 @@ void Mesh::Upload(std::span<const float> vertices,
 {
 	Release();
 
-	if (vertices.empty()) throw std::invalid_argument("[Mesh] Массив вершин пуст");
-	if (layout.empty()) throw std::invalid_argument("[Mesh] Описание вершины пустое");
-	if (indices.empty()) throw std::invalid_argument("[Mesh] Массив индексов пуст");
+	if (vertices.empty()) throw std::invalid_argument("[Mesh] Vertex array is empty");
+	if (layout.empty())   throw std::invalid_argument("[Mesh] Vertex layout is empty");
+	if (indices.empty())  throw std::invalid_argument("[Mesh] Index array is empty");
 
 	glGenVertexArrays(1, &_vao);
 	glBindVertexArray(_vao);

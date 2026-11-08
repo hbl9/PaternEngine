@@ -7,14 +7,14 @@
 Mesh* ResourceManager::GetMesh(const std::string& name) const
 {
 	auto mesh = _meshes.find(name);
-	if (mesh == _meshes.end()) throw std::invalid_argument("[ResourceManager] Mesh не найден: " + name);
+	if (mesh == _meshes.end()) throw std::invalid_argument("[ResourceManager] Mesh not found: " + name);
 	return mesh->second.get();
 }
 
 ShaderProgram* ResourceManager::GetShader(const std::string& name) const
 {
 	auto shader = _shaders.find(name);
-	if (shader == _shaders.end()) throw std::invalid_argument("[ResourceManager] Shader не найден: " + name);
+	if (shader == _shaders.end()) throw std::invalid_argument("[ResourceManager] Shader not found: " + name);
 	return shader->second.get();
 }
 
@@ -35,7 +35,7 @@ ShaderProgram* ResourceManager::CreateShader(const std::string& name, const char
 	if (temp != _shaders.end()) return temp->second.get();
 
 	auto shader = std::make_unique<ShaderProgram>(vertexPath, fragmentPath);
-	if (!shader->IsValid()) throw std::invalid_argument("[ResourceManager] Ошибка шейдера: " + name);
+	if (!shader->IsValid()) throw std::invalid_argument("[ResourceManager] Shader error: " + name);
 	_shaders[name] = std::move(shader);
 	return _shaders[name].get();
 }

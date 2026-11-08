@@ -32,8 +32,8 @@ void ShaderProgram::LoadFromFiles(const std::string& vertexPath, const std::stri
 	std::string vsSrc = ReadFile(vertexPath);
 	std::string fsSrc = ReadFile(fragmentPath);
 
-	if (vsSrc.empty()) throw std::invalid_argument("[SP] Ошибка чтения файла: " + vertexPath);
-	if (fsSrc.empty()) throw std::invalid_argument("[SP] Ошибка чтения файла: " + fragmentPath);
+	if (vsSrc.empty()) throw std::invalid_argument("[ShaderProgram] Failed to read file: " + vertexPath);
+	if (fsSrc.empty()) throw std::invalid_argument("[ShaderProgram] Failed to read file: " + fragmentPath);
 
 	_vertexPath = vertexPath;
 	_fragmentPath = fragmentPath;
@@ -46,7 +46,7 @@ void ShaderProgram::LoadFromFiles(const std::string& vertexPath, const std::stri
 	glDeleteShader(vs);
 	glDeleteShader(fs);
 
-	if (!program) throw std::runtime_error("[SP] Ошибка линковки шейдеров");
+	if (!program) throw std::runtime_error("[ShaderProgram] Shader linking failed");
 
 	Destroy();
 	_id = program;
@@ -76,7 +76,7 @@ GLuint ShaderProgram::CompileShader(GLenum type, const std::string& src, const s
 		char infoLog[512] = {};
 		glGetShaderInfoLog(shader, sizeof(infoLog), nullptr, infoLog);
 		glDeleteShader(shader);
-		throw std::runtime_error("[SP] Ошибка компиляции шейдера: " + path + '\n' + infoLog);
+		throw std::runtime_error("[ShaderProgram] Shader compilation failed: " + path + '\n' + infoLog);
 	}
 
 	return shader;
@@ -126,7 +126,7 @@ GLuint ShaderProgram::LinkProgram(GLuint vertex, GLuint fragment)
 		char infoLog[512] = {};
 		glGetProgramInfoLog(program, sizeof(infoLog), nullptr, infoLog);
 		glDeleteProgram(program);
-		throw std::runtime_error("[SP] Ошибка линковки программы:\n" + std::string(infoLog));
+		throw std::runtime_error("[ShaderProgram] Program linking failed:\n" + std::string(infoLog));
 	}
 	return program;
 }
@@ -136,7 +136,7 @@ std::string ShaderProgram::ReadFile(const std::string& path)
 	std::ifstream file(path);
 	std::stringstream ss;
 
-	if (!file.is_open()) throw std::runtime_error("[SP] Не удалось открыть файл: " + path);
+	if (!file.is_open()) throw std::runtime_error("[ShaderProgram] Failed to open file: " + path);
 
 	ss << file.rdbuf();
 
@@ -198,7 +198,7 @@ void ShaderProgram::FindUniform(const std::string& name, GLint& id) const
 {
 	auto u = _uniformCache.find(name);
 	if (u == _uniformCache.end())
-		throw std::runtime_error("[SP] Не найден uniform: " + name + " для шейдеров - " + _vertexPath + ' ' + _fragmentPath);
+		throw std::runtime_error("[ShaderProgram] Uniform not found: " + name + " for shaders - " + _vertexPath + ' ' + _fragmentPath);
 	id = u->second.location;
 }
 

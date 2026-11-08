@@ -27,8 +27,8 @@ glm::mat4 Camera::GetProjectionMatrix(float aspect) const
 
 void Camera::SetNearFar(float nearZ, float farZ)
 {
-	if (nearZ <= 0.0f) throw std::invalid_argument("[Camera] Ближняя граница видимости должна быть положительной");
-	if (nearZ >= farZ) throw std::invalid_argument("[Camera] Ближняя граница видимости должна быть меньше дальней");
+	if (nearZ <= 0.0f) throw std::invalid_argument("[Camera] Near clip distance must be positive");
+	if (nearZ >= farZ) throw std::invalid_argument("[Camera] Near clip distance must be less than far clip distance");
 
 	_nearZ = nearZ;
 	_farZ = farZ;

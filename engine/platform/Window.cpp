@@ -7,27 +7,27 @@
 
 Window::Window(int width, int height, const char* title, GLFWmonitor* monitor, GLFWwindow* share, FrameRateMode frameRateMode)
 {
-	if (!glfwInit()) throw std::runtime_error("Ошибка инициализации GLFW");
+	if (!glfwInit()) throw std::runtime_error("[Window] GLFW initialization failed");
 
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	GLFWwindow* window = glfwCreateWindow(width, height, title, monitor, share);
-	if (!window) throw std::runtime_error("Ошибка создания окна");
+	if (!window) throw std::runtime_error("[Window] Window creation failed");
 
 	_window = window;
 
 	glfwMakeContextCurrent(_window);
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
-		throw std::runtime_error("Ошибка загрузки указателей на функции OpenGL");
+		throw std::runtime_error("[Window] Failed to load OpenGL function pointers");
 
 	glViewport(0, 0, width, height);
 
 	if (frameRateMode == FrameRateMode::VSync)
-		glfwSwapInterval(1);  // vsync
+		glfwSwapInterval(1);  // VSync
 	else
-		glfwSwapInterval(0);  // Без ограничений
+		glfwSwapInterval(0);  // Unlimited
 
 	glfwSetFramebufferSizeCallback(_window, [](GLFWwindow*, int w, int h) { glViewport(0, 0, w, h); });
 	UpdateFrameBufferSize();

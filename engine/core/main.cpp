@@ -21,7 +21,7 @@ int main(int argc, char** argv)
 	std::unique_ptr<CameraController> cameraController = std::make_unique<CameraController>();
 	if (!app.Init(std::move(game), std::move(cameraController)))
 	{
-		std::cout << "Ошибка инициализации\n";
+		std::cout << "Initialization failed\n";
 		return 1;
 	}
 	app.Run();
