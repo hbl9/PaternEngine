@@ -76,6 +76,15 @@
     <Filter Include="Исходные файлы\game\network">
       <UniqueIdentifier>{84bae1d3-de44-4dcb-afa5-bd4e4def46ba}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ImGui">
+      <UniqueIdentifier>{c324da95-bd15-45aa-b754-b5ad3d3a8569}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Исходные файлы\engine\core\application">
+      <UniqueIdentifier>{904b9a9b-4fe9-4066-a069-c1448465d758}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Файлы заголовков\engine\core\application">
+      <UniqueIdentifier>{fac2de4a-15b8-45cd-9a28-fb52ed6f6ec1}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="engine\core\main.cpp">
@@ -122,6 +131,30 @@
     </ClCompile>
     <ClCompile Include="game\network\GameProtocol.cpp">
       <Filter>Исходные файлы\game\network</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\core\application\EditorLayer.cpp">
+      <Filter>Исходные файлы\engine\core\application</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\imgui\imgui.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\imgui\imgui_demo.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\imgui\imgui_draw.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\imgui\imgui_impl_glfw.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\imgui\imgui_impl_opengl3.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\imgui\imgui_tables.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\imgui\imgui_widgets.cpp">
+      <Filter>ImGui</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -172,6 +205,39 @@
     </ClInclude>
     <ClInclude Include="game\network\GameProtocol.h">
       <Filter>Файлы заголовков\game\network</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\graphics\VertexAttribute.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\imgui\imconfig.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\imgui\imgui.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\imgui\imgui_impl_glfw.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\imgui\imgui_impl_opengl3.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\imgui\imgui_impl_opengl3_loader.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\imgui\imgui_internal.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\imgui\imstb_rectpack.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\imgui\imstb_textedit.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\imgui\imstb_truetype.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\core\application\EditorLayer.h">
+      <Filter>Файлы заголовков\engine\core\application</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

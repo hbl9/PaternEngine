@@ -21,11 +21,19 @@
   <ItemGroup>
     <ClCompile Include="engine\camera\Camera.cpp" />
     <ClCompile Include="engine\core\Application.cpp" />
+    <ClCompile Include="engine\core\application\EditorLayer.cpp" />
     <ClCompile Include="engine\core\main.cpp" />
     <ClCompile Include="engine\graphics\Mesh.cpp" />
     <ClCompile Include="engine\graphics\MeshFactory.cpp" />
     <ClCompile Include="engine\graphics\ResourceManager.cpp" />
     <ClCompile Include="engine\graphics\ShaderProgram.cpp" />
+    <ClCompile Include="engine\imgui\imgui.cpp" />
+    <ClCompile Include="engine\imgui\imgui_demo.cpp" />
+    <ClCompile Include="engine\imgui\imgui_draw.cpp" />
+    <ClCompile Include="engine\imgui\imgui_impl_glfw.cpp" />
+    <ClCompile Include="engine\imgui\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="engine\imgui\imgui_tables.cpp" />
+    <ClCompile Include="engine\imgui\imgui_widgets.cpp" />
     <ClCompile Include="engine\network\Network.cpp" />
     <ClCompile Include="engine\platform\InputManager.cpp" />
     <ClCompile Include="engine\platform\Window.cpp" />
@@ -39,12 +47,22 @@
     <ClInclude Include="engine\camera\Camera.h" />
     <ClInclude Include="engine\camera\ICameraController.h" />
     <ClInclude Include="engine\core\Application.h" />
+    <ClInclude Include="engine\core\application\EditorLayer.h" />
     <ClInclude Include="engine\game\IGame.h" />
     <ClInclude Include="engine\graphics\Mesh.h" />
     <ClInclude Include="engine\graphics\MeshFactory.h" />
     <ClInclude Include="engine\graphics\ResourceManager.h" />
     <ClInclude Include="engine\graphics\ShaderProgram.h" />
     <ClInclude Include="engine\graphics\VertexAttribute.h" />
+    <ClInclude Include="engine\imgui\imconfig.h" />
+    <ClInclude Include="engine\imgui\imgui.h" />
+    <ClInclude Include="engine\imgui\imgui_impl_glfw.h" />
+    <ClInclude Include="engine\imgui\imgui_impl_opengl3.h" />
+    <ClInclude Include="engine\imgui\imgui_impl_opengl3_loader.h" />
+    <ClInclude Include="engine\imgui\imgui_internal.h" />
+    <ClInclude Include="engine\imgui\imstb_rectpack.h" />
+    <ClInclude Include="engine\imgui\imstb_textedit.h" />
+    <ClInclude Include="engine\imgui\imstb_truetype.h" />
     <ClInclude Include="engine\network\Network.h" />
     <ClInclude Include="engine\platform\InputManager.h" />
     <ClInclude Include="engine\platform\Window.h" />
@@ -147,6 +165,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>D:\1\CPP\ConsoleApplication2\ConsoleApplication2\engine\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -168,6 +187,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>D:\1\CPP\ConsoleApplication2\ConsoleApplication2\engine\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

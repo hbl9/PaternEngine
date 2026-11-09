@@ -47,7 +47,7 @@ public:
 	glm::vec3 GetWorldPosition() const;
 	const glm::vec3& GetLocalPosition()	const;
 	SceneObject* GetParent();
-	std::vector<SceneObject*> GetChildren();
+	std::vector<SceneObject*>& GetChildren();
 	const glm::vec3& GetColor() const;
 	const std::string& GetName() const;
 

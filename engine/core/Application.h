@@ -9,6 +9,7 @@ class ICameraController;
 class Scene;
 class Window;
 class Network;
+class EditorLayer;
 
 class Application
 {
@@ -27,6 +28,7 @@ private:
 	std::unique_ptr<Scene>			   _scene			 = nullptr;
 	std::unique_ptr<Window>			   _window			 = nullptr;
 	std::unique_ptr<Network>		   _network			 = nullptr;
+	std::unique_ptr< EditorLayer>	   _editor			 = nullptr;
 
 	float _lastFrame = 0.0f;
 

@@ -4,35 +4,15 @@
 #include "SceneObject.h"
 #include "Scene.h"
 #include <algorithm>
-#include <iostream>
 #include <utility>
 
 Scene::Scene() : _resources(std::make_unique<ResourceManager>()) {}
 Scene::~Scene() = default;
 
-/// <summary>
-/// Creates SceneObject and adds it to the list of objects.
-/// </summary>
-/// <param name="oName">Object name</param>
-/// <param name="mName">Mesh name (ResourceManager key)</param>
-/// <param name="sName">Shader name (ResourceManager key)</param>
-/// <param name="pos">Object center in parent-local coordinates</param>
-/// <param name="p">Object parent (can be nullptr)</param>
-/// <returns>Pointer to the created object, or nullptr on failure</returns>
 SceneObject* Scene::CreateObject(const char* oName, const char* mName, const char* sName, const glm::vec3& pos, SceneObject* p)
 {
 	Mesh* mesh = _resources->GetMesh(mName);
 	ShaderProgram* shader = _resources->GetShader(sName);
-	if (!shader)
-	{
-		std::cout << "[Scene] Shader not found: " << sName << "\n";
-		return nullptr;
-	}
-	if (!mesh)
-	{
-		std::cout << "[Scene] Mesh not found: " << mName << "\n";
-		return nullptr;
-	}
 
 	std::unique_ptr<SceneObject> obj = std::make_unique<SceneObject>(oName, mesh, shader);
 	obj->SetLocalPosition(pos);
@@ -58,6 +38,14 @@ SceneObject* Scene::GetFirstOrNull(const std::string& name)
 		if (obj->GetName() == name)
 			return obj.get();
 	return nullptr;
+}
+std::vector<SceneObject*> Scene::GetRoots() const
+{
+	std::vector<SceneObject*> roots;
+	for (auto& obj : _objects)
+		if (!obj->GetParent())
+			roots.push_back(obj.get());
+	return roots;
 }
 
 void Scene::ClearObjects() { _objects.clear(); }

@@ -15,6 +15,8 @@ public:
 
 	void SetupInputCallbacks(Window* window);
 
+	void ClearMouseDelta();
+
 private:
 	bool _firstMouse = true;
 

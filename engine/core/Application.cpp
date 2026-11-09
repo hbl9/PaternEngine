@@ -6,11 +6,13 @@
 #include "../platform/InputManager.h"
 #include "../platform/Window.h"
 #include "../scene/Scene.h"
+#include "application/EditorLayer.h"
 #include <glad/glad.h>
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 #include <glm/vec3.hpp>
 #include <utility>
+#include <imgui.h>
 
 Application::Application(int width, int height, const char* title) :
 	_input(std::make_unique<InputManager>()),
@@ -22,17 +24,12 @@ Application::Application(int width, int height, const char* title) :
 
 Application::~Application()
 {
+	_editor.reset();
 	_game.reset();
 	_network.reset();
 	_scene.reset();
-
-	if (_window && _window->GetWindow())
-	{
-		auto* data = static_cast<std::pair<Window*, InputManager*>*>(glfwGetWindowUserPointer(_window->GetWindow()));
-		delete data;
-	}
-
 	_window.reset();
+
 	glfwTerminate();
 }
 
@@ -57,6 +54,8 @@ bool Application::Init(std::unique_ptr<IGame> game, std::unique_ptr<ICameraContr
 		_game->OnInit(*_scene);
 	}
 
+	_editor = std::make_unique<EditorLayer>(*_window, *_scene, *_input);
+
 	_input->SetupInputCallbacks(_window.get());
 
 	glEnable(GL_DEPTH_TEST);
@@ -73,13 +72,23 @@ void Application::Render()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	_scene->Draw(_camera->GetViewMatrix(), _camera->GetProjectionMatrix(_window->GetAspectRatio()));
-
-	_window->SwapBuffers();
 }
 
 void Application::Update(float deltaTime)
 {
-	if (_cameraController) _cameraController->Update(*_input, *_window, deltaTime);
+	ImGuiIO& io = ImGui::GetIO();
+
+	if (!_window->IsCursorCaptured() && ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
+		!io.WantCaptureMouse && !io.WantTextInput)
+	{
+		_window->SetCursorCaptured(true);
+		_input->ResetMouse();
+	}
+
+	if (_cameraController && !io.WantTextInput)
+		_cameraController->Update(*_input, *_window, deltaTime);
+	else
+		_input->ClearMouseDelta();
 
 	if (_game) _game->OnUpdate(deltaTime, *_scene, *_input);
 
@@ -96,7 +105,18 @@ void Application::Run()
 
 		_window->PollEvents();
 
+		if (_editor) _editor->BeginFrame();
+
 		Update(deltaTime);
+
 		Render();
+
+		if (_editor)
+		{
+			_editor->Draw();
+			_editor->EndFrame();
+		}
+
+		_window->SwapBuffers();
 	}
 }

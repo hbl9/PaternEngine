@@ -31,8 +31,8 @@ class Network
 public:
 	static constexpr double CLIENT_TIMEOUT = 15.0;
 	static constexpr std::uint16_t DEFAULT_PORT = 54545;
-	static constexpr std::uint32_t SYS_MAGIC_HELLO = 0x4750484C;		  // System packet
-	static constexpr std::uint32_t SYS_MAGIC_ASSIGN = 0x47504153;	  // System packet
+	static constexpr std::uint32_t SYS_MAGIC_HELLO = 0x4750484C;	   // System packet
+	static constexpr std::uint32_t SYS_MAGIC_ASSIGN = 0x47504153;	   // System packet
 	static constexpr std::uint32_t SYS_MAGIC_DISCONNECT = 0x47504C60;  // System packet
 	static constexpr std::uint32_t INVALID_ID = 0xFFFFFFFF;
 	

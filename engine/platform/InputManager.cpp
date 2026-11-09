@@ -5,6 +5,10 @@
 #include <GLFW/glfw3.h>
 #include <cmath>
 #include <utility>
+#include <imgui.h>
+
+static InputManager* g_input = nullptr;
+static Window* g_window = nullptr;
 
 void InputManager::ResetMouse() { _firstMouse = true; }
 
@@ -45,42 +49,24 @@ bool InputManager::ConsumeScroll(float& dy)
 void InputManager::SetupInputCallbacks(Window* window)
 {
 	GLFWwindow* winGL = window->GetWindow();
-
-	auto* temp = static_cast<std::pair<Window*, InputManager*>*>(glfwGetWindowUserPointer(winGL));
-	if (temp) delete temp;
-
-	auto* data = new std::pair<Window*, InputManager*>{ window, this };
-	glfwSetWindowUserPointer(winGL, data);
+	g_input = this;
+	g_window = window;
 
 	glfwSetCursorPosCallback(winGL, [](GLFWwindow* w, double xpos, double ypos)
 		{
-			auto* data = static_cast<std::pair<Window*, InputManager*>*>(glfwGetWindowUserPointer(w));
-			if (data && data->first->IsCursorCaptured()) data->second->OnCursorPos(xpos, ypos);
+			if (g_window->IsCursorCaptured()) g_input->OnCursorPos(xpos, ypos);
 		});
 
 	glfwSetScrollCallback(winGL, [](GLFWwindow* w, double xoffset, double yoffset)
 		{
-			auto* data = static_cast<std::pair<Window*, InputManager*>*>(glfwGetWindowUserPointer(w));
-			if (data && data->first->IsCursorCaptured()) data->second->OnScroll(yoffset);
-		});
-
-	glfwSetMouseButtonCallback(winGL, [](GLFWwindow* w, int button, int action, int mods)
-		{
-			if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
-			{
-				auto* data = static_cast<std::pair<Window*, InputManager*>*>(glfwGetWindowUserPointer(w));
-				if (data && !data->first->IsCursorCaptured())
-				{
-					data->first->SetCursorCaptured(true);
-					data->second->ResetMouse();
-				}
-			}
+			if (g_window->IsCursorCaptured()) g_input->OnScroll(yoffset);
 		});
 
 	glfwSetKeyCallback(winGL, [](GLFWwindow* w, int key, int scancode, int action, int mods)
 		{
-			auto* data = static_cast<std::pair<Window*, InputManager*>*>(glfwGetWindowUserPointer(w));
-			if (data && key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-				data->first->SetCursorCaptured(false);
+			if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+				g_window->SetCursorCaptured(false);
 		});
 }
+
+void InputManager::ClearMouseDelta() { _dx = _dy = _scroll = 0; }

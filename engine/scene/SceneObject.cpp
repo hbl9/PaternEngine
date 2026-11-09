@@ -60,7 +60,7 @@ const glm::mat4& SceneObject::GetModelMatrix() const
 glm::vec3 SceneObject::GetWorldPosition() const { return glm::vec3(GetModelMatrix()[3]); }
 const glm::vec3& SceneObject::GetLocalPosition() const { return _position; }
 SceneObject* SceneObject::GetParent() { return _parent; }
-std::vector<SceneObject*> SceneObject::GetChildren() { return _children; }
+std::vector<SceneObject*>& SceneObject::GetChildren() { return _children; }
 const glm::vec3& SceneObject::GetColor() const { return _color; }
 const std::string& SceneObject::GetName() const { return _name; }
 
