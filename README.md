@@ -1,2 +1,2 @@
-# PatternEngine
-Custom 3D game engine and game (C++/OpenGL)
+# PaternEngine
+Custom 3D game engine (C++/OpenGL)
