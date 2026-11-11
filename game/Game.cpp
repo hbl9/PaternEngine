@@ -25,26 +25,47 @@ void Game::OnInit(Scene& scene)
 	scene.GetResources().CreateShader("plane", "assets/shaders/plane.vert", "assets/shaders/plane.frag");
 	scene.GetResources().CreateShader("player", "assets/shaders/player.vert", "assets/shaders/player.frag");
 
-	SceneObject* plane = scene.CreateObject("Plane", "plane", "plane");
-	plane->SetColor(0.55f, 0.55f, 0.55f);
-	plane->SetUniform("uColor", plane->GetColor());
+	std::uint64_t planeId = scene.CreateObject("Plane", "plane", "plane");
+	if (SceneObject* plane = scene.GetObjById(planeId); plane != nullptr)
+	{
+		plane->SetColor(0.55f, 0.55f, 0.55f);
+		plane->SetUniform("uColor", plane->GetColor());
+	}
 
-	_player = scene.CreateObject("player", "cube", "player", _cameraController->GetPos());
-	_player->SetColor(glm::vec3(0.8f, 0.5f, 0.2f));
-	_player->SetUniform("uColor", _player->GetColor());
-	_player->SetLocalScale({ 0.2f, 0.2f, 0.2f });
+	_playerId = scene.CreateObject("player", "cube", "player", _cameraController->GetPos());
+	if (SceneObject* player = scene.GetObjById(_playerId); player != nullptr)
+	{
+		player->SetColor(glm::vec3(0.8f, 0.5f, 0.2f));
+		player->SetUniform("uColor", player->GetColor());
+		player->SetLocalScale({ 0.2f, 0.2f, 0.2f });
+	}
 
-	_dick = scene.CreateDot("Dick");
-	scene.CreateObject("cube", "cube", "basic", glm::vec3(-0.5f, 0.5f, 0.0f), _dick);
-	scene.CreateObject("cube", "cube", "basic", glm::vec3(0.5f, 0.5f, 0.0f), _dick);
-	scene.CreateObject("cube", "cube", "basic", glm::vec3(0.0f, 1.5f, 0.0f), _dick);
-	scene.CreateObject("cube", "cube", "basic", glm::vec3(0.0f, 2.5f, 0.0f), _dick);
+	_dickId = scene.CreateDot("Dick");
+	scene.CreateObject("cube", "cube", "basic", glm::vec3(-0.5f, 0.5f, 0.0f), _dickId);
+	scene.CreateObject("cube", "cube", "basic", glm::vec3(0.5f, 0.5f, 0.0f), _dickId);
+	scene.CreateObject("cube", "cube", "basic", glm::vec3(0.0f, 1.5f, 0.0f), _dickId);
+	scene.CreateObject("cube", "cube", "basic", glm::vec3(0.0f, 2.5f, 0.0f), _dickId);
+
+	scene.AddDestroyListener([this](std::uint64_t id)
+		{
+			if (id == _playerId) _playerId = SceneHandle::INVALID;
+			if (id == _dickId) _dickId = SceneHandle::INVALID;
+			for (auto rp = _remotePlayersId.begin(); rp != _remotePlayersId.end();)
+				if (rp->second == id) rp = _remotePlayersId.erase(rp);
+				else rp++;
+		});
 }
 
 void Game::OnUpdate(float deltaTime, Scene& scene, InputManager& im)
 {
-	_dick->Rotate(deltaTime, glm::vec3(0.0f, 1.0f, 0.0f));
-	_player->SetLocalPosition(_cameraController->GetPos());
+	if (SceneObject* dick = scene.GetObjById(_dickId); dick != nullptr)
+		dick->Rotate(deltaTime, glm::vec3(0.0f, 1.0f, 0.0f));
+	else
+		std::cout << "Object dick not found\n";
+	if (SceneObject* player = scene.GetObjById(_playerId); player != nullptr)
+		player->SetLocalPosition(_cameraController->GetPos());
+	else
+		std::cout << "Object player not found\n";
 
 	if (_network && _network->IsRunning())
 	{
@@ -95,30 +116,32 @@ void Game::SendLocalState()
 
 void Game::ApplyRemoteState(Scene& scene, const PlayerState& ps)
 {
-	auto rp = _remotePlayers.find(ps.id);
-	if (rp == _remotePlayers.end())
+	auto rpId = _remotePlayersId.find(ps.id);
+	if (rpId == _remotePlayersId.end())
 	{
-		SceneObject* obj = scene.CreateObject("remotePlayer", "cube", "player", ps.pos);
-		obj->SetColor(glm::vec3(0.2f, 0.5f, 0.8f) * glm::vec3(static_cast<float>(ps.id)));
-		obj->SetUniform("uColor", obj->GetColor());
-		obj->SetRotationFromYawPitch(ps.yaw, ps.pitch);
-		obj->SetLocalScale({ 0.2f, 0.2f, 0.2f });
-		_remotePlayers[ps.id] = obj;
+		std::uint64_t objId = scene.CreateObject("remotePlayer", "cube", "player", ps.pos);
+		if (SceneObject* obj = scene.GetObjById(objId); obj != nullptr)
+		{
+			obj->SetColor(glm::vec3(0.2f, 0.5f, 0.8f) * glm::vec3(static_cast<float>(ps.id)));
+			obj->SetUniform("uColor", obj->GetColor());
+			obj->SetRotationFromYawPitch(ps.yaw, ps.pitch);
+			obj->SetLocalScale({ 0.2f, 0.2f, 0.2f });
+		}
+		_remotePlayersId[ps.id] = objId;
 	}
-	else
+	else if (SceneObject* rp = scene.GetObjById(rpId->second); rp != nullptr)
 	{
-		rp->second->SetLocalPosition(ps.pos);
-		rp->second->SetRotationFromYawPitch(ps.yaw, ps.pitch);
+		rp->SetLocalPosition(ps.pos);
+		rp->SetRotationFromYawPitch(ps.yaw, ps.pitch);
 	}
 }
 
 void Game::RemoveRemotePlayer(Scene& scene, std::uint32_t id)
 {
-	auto rp = _remotePlayers.find(id);
-	if (rp != _remotePlayers.end())
+	auto rp = _remotePlayersId.find(id);
+	if (rp != _remotePlayersId.end())
 	{
 		std::cout << "[Network] Player with ID=" << id << " disconnected\n";
 		scene.RemoveObject(rp->second);
-		_remotePlayers.erase(rp);
 	}
 }

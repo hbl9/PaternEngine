@@ -3,6 +3,7 @@
 #include "Application.h"
 #include <clocale>
 #include <iostream>
+#include <cstring>
 
 int main(int argc, char** argv)
 {

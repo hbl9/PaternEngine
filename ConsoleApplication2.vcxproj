@@ -37,7 +37,9 @@
     <ClCompile Include="engine\network\Network.cpp" />
     <ClCompile Include="engine\platform\InputManager.cpp" />
     <ClCompile Include="engine\platform\Window.cpp" />
+    <ClCompile Include="engine\scene\Picking.cpp" />
     <ClCompile Include="engine\scene\Scene.cpp" />
+    <ClCompile Include="engine\scene\SceneHandle.cpp" />
     <ClCompile Include="engine\scene\SceneObject.cpp" />
     <ClCompile Include="game\camera\CameraController.cpp" />
     <ClCompile Include="game\Game.cpp" />
@@ -66,7 +68,9 @@
     <ClInclude Include="engine\network\Network.h" />
     <ClInclude Include="engine\platform\InputManager.h" />
     <ClInclude Include="engine\platform\Window.h" />
+    <ClInclude Include="engine\scene\Picking.h" />
     <ClInclude Include="engine\scene\Scene.h" />
+    <ClInclude Include="engine\scene\SceneHandle.h" />
     <ClInclude Include="engine\scene\SceneObject.h" />
     <ClInclude Include="game\camera\CameraController.h" />
     <ClInclude Include="game\Game.h" />

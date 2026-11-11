@@ -22,6 +22,7 @@ public:
 	glm::vec3 GetPos() const;
 	float GetYaw() const;
 	float GetPitch() const;
+	void GetRayFromScreen(float ndcX, float ndcY, float aspect, glm::vec3& outOrigin, glm::vec3& outDir) const;
 
 	void ProcessKeyboard(CameraMovement direction, float deltaTime, bool shiftPressed);
 	void ProcessMouseMovement(float xoffset, float yoffset, bool constrainPitch = true);

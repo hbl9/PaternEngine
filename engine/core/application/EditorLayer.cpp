@@ -9,6 +9,8 @@
 #include <imgui_impl_opengl3.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
+#include <string>
+#include <glm/vec3.hpp>
 
 EditorLayer::EditorLayer(Window& window, Scene& scene, InputManager& input) :
 	_window(window), _scene(scene), _input(input)
@@ -16,8 +18,14 @@ EditorLayer::EditorLayer(Window& window, Scene& scene, InputManager& input) :
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGui::StyleColorsDark();
-	ImGui_ImplGlfw_InitForOpenGL(_window.GetWindow(), false);
+	ImGui_ImplGlfw_InitForOpenGL(_window.GetWindow(), true);
 	ImGui_ImplOpenGL3_Init("#version 330");
+
+	_scene.AddDestroyListener([this](std::uint64_t id)
+		{
+			if (_selectedId == id) _selectedId = SceneHandle::INVALID;
+			if (_pendingDeleteObjId == id) _pendingDeleteObjId = SceneHandle::INVALID;
+		});
 }
 
 EditorLayer::~EditorLayer()
@@ -29,6 +37,9 @@ EditorLayer::~EditorLayer()
 
 void EditorLayer::BeginFrame()
 {
+	if (_pendingDeleteObjId != SceneHandle::INVALID)
+		_scene.RemoveObject(_pendingDeleteObjId);
+
 	GLFWwindow* w = _window.GetWindow();
 	ImGuiIO& io = ImGui::GetIO();
 
@@ -61,69 +72,124 @@ void EditorLayer::EndFrame()
 void EditorLayer::Draw()
 {
 	DrawHierarchy();
-	DrawInspector();
-	DrawContextMenu();
+	DrawPropertyPanel();
 }
 
 void EditorLayer::DrawHierarchy()
 {
 	ImGui::Begin("Hierarchy");
 
-	std::vector<SceneObject*> roots = _scene.GetRoots();
-	for (SceneObject* root : roots)
-		DrawObjectNode(root);
+	if (_window.IsCursorCaptured())
+		ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "Camera locked - press F1 to release");
+	else
+		ImGui::TextDisabled("F1 - capture camera");
+
+	ImGui::Separator();
+
+	if (ImGui::BeginPopupContextWindow("hierarchy_ctx",
+		ImGuiPopupFlags_MouseButtonRight | ImGuiPopupFlags_NoOpenOverItems))
+	{
+		if (ImGui::MenuItem("Create Cube")) _scene.CreateObject("Cube_obj", "cube", "basic");
+		if (ImGui::MenuItem("Create Empty")) _scene.CreateDot("Dot_obj");
+		ImGui::EndPopup();
+	}
+
+	for (std::uint64_t rootId : _scene.GetRootsId())
+		DrawObjectNode(rootId);
 
 	if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !ImGui::IsAnyItemHovered())
-		_selected = nullptr;
+		SetSelected(SceneHandle::INVALID);
 
 	ImGui::End();
 }
 
-void EditorLayer::DrawInspector()
+void EditorLayer::DrawPropertyPanel()
 {
+	ImGui::Begin("Property Panel");
 
+	SceneObject* obj = _scene.GetObjById(_selectedId);
+	if (!obj)
+	{
+		ImGui::TextDisabled("Nothing selected");
+		ImGui::End();
+		return;
+	}
+
+	char buf[256];
+	std::snprintf(buf, sizeof(buf), "%s", obj->GetName().c_str());
+	if (ImGui::InputText("Name", buf, sizeof(buf)))
+		obj->SetName(buf);
+
+	glm::vec3 pos = obj->GetLocalPosition();
+	if (ImGui::DragFloat3("Position", &pos.x, 0.01f))
+		obj->SetLocalPosition(pos);
+
+	glm::vec3 scale = obj->GetLocalScale();
+	if (ImGui::DragFloat3("Scale", &scale.x, 0.01f))
+		obj->SetLocalScale(scale);
+
+	if (SceneObject* parent = obj->GetParent(); parent != nullptr)
+		ImGui::Text("Parent: %s", parent->GetName().c_str());
+	else
+		ImGui::TextDisabled("Root");
+
+	ImGui::End();
 }
 
-void EditorLayer::DrawContextMenu()
+void EditorLayer::DrawObjectNode(std::uint64_t id)
 {
+	SceneObject* obj = _scene.GetObjById(id);
 
-}
+	if (!obj) return;
 
-void EditorLayer::DrawObjectNode(SceneObject* obj)
-{
 	ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
+	std::vector<std::uint64_t> children = _scene.GetChildren(id);
 
-	if (obj->GetChildren().empty())
-		flags |= ImGuiTreeNodeFlags_Leaf;
+	if (children.empty()) flags |= ImGuiTreeNodeFlags_Leaf;
+	if (_selectedId == id) flags |= ImGuiTreeNodeFlags_Selected;
 
-	if (_selected == obj)
-		flags |= ImGuiTreeNodeFlags_Selected;
+	ImGui::PushID(static_cast<int>(id));
 
-	ImGui::PushID(obj);
-
-	bool open = ImGui::TreeNodeEx(reinterpret_cast<void*>(obj), flags, "%s", obj->GetName().c_str());
+	bool open = ImGui::TreeNodeEx(reinterpret_cast<void*>(id), flags, "%s", obj->GetName().c_str());
 
 	if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
-		_selected = obj;
+		SetSelected(id);
 
 	if (ImGui::BeginPopupContextItem("obj_ctx"))
 	{
-		if (ImGui::MenuItem("Create object")) 
-			_scene.CreateObject("object", "cube", "basic", glm::vec3{ 0.0f }, obj);
+		if (ImGui::MenuItem("Create child Cube")) 
+			_scene.CreateObject("Cube_obj", "cube", "basic", glm::vec3(0.0f), id);
+		if (ImGui::MenuItem("Create child Empty")) 
+			_scene.CreateDot("Dot_obj", glm::vec3(0.0f), id);
 		if (ImGui::MenuItem("Delete"))
-		{
-			_scene.RemoveObject(_selected);
-			_selected = nullptr;
-		}
+			_pendingDeleteObjId = id;
 		ImGui::EndPopup();
 	}
 
 	if (open)
 	{
-		for (SceneObject* child : obj->GetChildren())
+		for (std::uint64_t child : children)
 			DrawObjectNode(child);
 		ImGui::TreePop();
 	}
 
 	ImGui::PopID();
+}
+
+std::uint64_t EditorLayer::GetSelected() const { return _selectedId; }
+
+void EditorLayer::SetSelected(std::uint64_t id)
+{
+	if (id != SceneHandle::INVALID && _scene.Contains(id))
+	{
+		if (_selectedId != SceneHandle::INVALID)
+			if (SceneObject* prev = _scene.GetObjById(_selectedId); prev != nullptr)
+				prev->SetSelected(false);
+
+		_selectedId = id;
+
+		if (_selectedId != SceneHandle::INVALID)
+			if (SceneObject* cur = _scene.GetObjById(_selectedId); cur != nullptr)
+				cur->SetSelected(true);
+	}
 }

@@ -5,9 +5,10 @@
 #include <glm/gtc/quaternion.hpp>
 #include <type_traits>
 #include <stdexcept>
+#include <limits>
 
-SceneObject::SceneObject(const char* name, Mesh* mesh, ShaderProgram* shader) : _mesh(mesh), _name(name) { _material->Shader = shader; }
-SceneObject::SceneObject(const char* name) : _isNothing(true), _name(name) {}
+SceneObject::SceneObject(std::uint64_t id, const char* name, Mesh* mesh, ShaderProgram* shader) : _id(id), _mesh(mesh), _name(name) { _material->Shader = shader; }
+SceneObject::SceneObject(std::uint64_t id, const char* name) : _id(id), _isNothing(true), _name(name) {}
 SceneObject::~SceneObject()
 {
 	if (_parent) std::erase(_parent->_children, this);
@@ -27,7 +28,6 @@ void SceneObject::SetWorldPosition(const glm::vec3& pos)
 	SetLocalPosition(glm::vec3(glm::inverse(_parent->GetModelMatrix()) * glm::vec4(pos, 1.0f)));
 	MarkDirty();
 }
-
 void SceneObject::SetParent(SceneObject* parent)
 {
 	if (_parent == parent) return;
@@ -40,16 +40,16 @@ void SceneObject::SetParent(SceneObject* parent)
 
 	MarkDirty();
 }
-
 void SceneObject::SetLocalRotation(float angleRad, const glm::vec3& axis) { _rotation = glm::rotate(glm::mat4(1.0f), angleRad, glm::normalize(axis)); MarkDirty(); }
 void SceneObject::SetLocalRotation(const glm::mat4& rot) { _rotation = rot; MarkDirty(); }
 void SceneObject::SetLocalRotation(const glm::quat& q) { _rotation = glm::mat4_cast(q); MarkDirty(); }
 void SceneObject::SetRotationFromYawPitch(float yawDeg, float pitchDeg) { SetLocalRotation(glm::quat(glm::vec3(glm::radians(pitchDeg), glm::radians(-yawDeg - 90.0f), 0.0f))); }
-
 void SceneObject::SetLocalPosition(const glm::vec3& pos) { _position = pos; MarkDirty(); }
 void SceneObject::SetLocalScale(const glm::vec3& scale) { _scale = scale; MarkDirty(); }
 void SceneObject::SetColor(const glm::vec3& color) { _color = color; }
 void SceneObject::SetColor(float r, float g, float b) { SetColor(glm::vec3(r, g, b)); }
+void SceneObject::SetName(const std::string& name) { _name = name; }
+void SceneObject::SetSelected(bool selected) { _selected = selected; }
 
 const glm::mat4& SceneObject::GetModelMatrix() const
 {
@@ -57,12 +57,86 @@ const glm::mat4& SceneObject::GetModelMatrix() const
 	return _model;
 }
 
+glm::vec3 SceneObject::GetLocalAabbMin() const
+{
+	if (HasLocalAabb())
+		return _mesh->GetAabbMin();
+	return glm::vec3(std::numeric_limits<float>::infinity());
+}
+glm::vec3 SceneObject::GetLocalAabbMax() const
+{
+	if (HasLocalAabb())
+		return _mesh->GetAabbMax();
+	return glm::vec3(-std::numeric_limits<float>::infinity());
+}
+glm::vec3 SceneObject::GetWorldAabbMin() const
+{
+	glm::vec3 min, max;
+	GetWorldAabb(min, max);
+	return min;
+}
+glm::vec3 SceneObject::GetWorldAabbMax() const
+{
+	glm::vec3 min, max;
+	GetWorldAabb(min, max);
+	return max;
+}
+void SceneObject::GetWorldAabb(glm::vec3& outMin, glm::vec3& outMax) const
+{
+	if (!HasLocalAabb())
+	{
+		outMin = glm::vec3(std::numeric_limits<float>::infinity());
+		outMax = glm::vec3(-std::numeric_limits<float>::infinity());
+		_worldAabbDirty = false;
+		return;
+	}
+	if (!_worldAabbDirty)
+	{
+		outMin = _worldAabbMin;
+		outMax = _worldAabbMax;
+		return;
+	}
+
+	glm::vec3 lmin = _mesh->GetAabbMin();
+	glm::vec3 lmax = _mesh->GetAabbMax();
+	glm::mat4 mm = GetModelMatrix();
+
+	glm::vec3 min(std::numeric_limits<float>::max());
+	glm::vec3 max(std::numeric_limits<float>::lowest());
+
+	for (int i = 0; i < 8; i++)
+	{
+		glm::vec3 corner(
+			(i & 1) ? lmax.x : lmin.x,
+			(i & 2) ? lmax.y : lmin.y,
+			(i & 4) ? lmax.z : lmin.z);
+
+		glm::vec4 w = mm * glm::vec4(corner, 1.0f);
+		min = glm::min(min, glm::vec3(w));
+		max = glm::max(max, glm::vec3(w));
+	}
+
+	_worldAabbMin = min;
+	_worldAabbMax = max;
+	_worldAabbDirty = false;
+
+	outMin = min;
+	outMax = max;
+}
 glm::vec3 SceneObject::GetWorldPosition() const { return glm::vec3(GetModelMatrix()[3]); }
 const glm::vec3& SceneObject::GetLocalPosition() const { return _position; }
+glm::vec3 SceneObject::GetLocalScale() const { return _scale; }
 SceneObject* SceneObject::GetParent() { return _parent; }
+const SceneObject* SceneObject::GetParent() const { return _parent; }
 std::vector<SceneObject*>& SceneObject::GetChildren() { return _children; }
+const std::vector<SceneObject*>& SceneObject::GetChildren() const { return _children; }
 const glm::vec3& SceneObject::GetColor() const { return _color; }
 const std::string& SceneObject::GetName() const { return _name; }
+std::uint64_t SceneObject::GetId() const { return _id; }
+
+bool SceneObject::IsNothing() const { return _isNothing; }
+bool SceneObject::IsSelected() const { return _selected; }
+bool SceneObject::HasLocalAabb() const { return !_isNothing && _mesh && _mesh->HasAabb(); }
 
 void SceneObject::Rotate(float angleRad, const glm::vec3& axis) { _rotation = glm::rotate(_rotation, angleRad, glm::normalize(axis)); MarkDirty(); }
 
@@ -82,6 +156,7 @@ void SceneObject::Draw(const glm::mat4& view, const glm::mat4& projection) const
 	_material->Shader->SendMat4("uModel", GetModelMatrix());
 	_material->Shader->SendMat4("uView", view);
 	_material->Shader->SendMat4("uProjection", projection);
+	_material->Shader->SendBool("uSelected", _selected);
 
 	for (const auto& u : _material->Uniforms)
 	{
@@ -107,6 +182,7 @@ void SceneObject::ClearUniforms() { _material->Uniforms.clear(); }
 void SceneObject::MarkDirty()
 {
 	_dirty = true;
+	_worldAabbDirty = true;
 	for (SceneObject* obj : _children)
 		obj->MarkDirty();
 }

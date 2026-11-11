@@ -49,11 +49,11 @@ void Window::MakeCurrent() { glfwMakeContextCurrent(_window); }
 void Window::SetVSync(FrameRateMode frameRateMode) { glfwSwapInterval(frameRateMode == FrameRateMode::VSync ? 1 : 0); }
 void Window::SetGLClearColor(GLfloat r, GLfloat g, GLfloat b, GLfloat a) { glClearColor(r, g, b, a); }
 
-void Window::UpdateFrameBufferSize() { glfwGetFramebufferSize(_window, &_width, &_height); }
+void Window::UpdateFrameBufferSize() { glfwGetFramebufferSize(_window, &_framebufferWidth, &_framebufferHeight); }
 
 GLFWwindow* Window::GetWindow() const { return _window; }
-glm::ivec2 Window::GetSizeWindow() const { return glm::ivec2(_width, _height); }
-float Window::GetAspectRatio() const { return _height == 0 ? 1 : _width / static_cast<float>(_height); }
+glm::ivec2 Window::GetFramebufferSize() const { return glm::ivec2(_framebufferWidth, _framebufferHeight); }
+float Window::GetAspectRatio() const { return _framebufferHeight == 0 ? 1 : _framebufferWidth / static_cast<float>(_framebufferHeight); }
 
 void Window::PollEvents() { glfwPollEvents(); }
 

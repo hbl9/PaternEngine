@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../../scene/SceneHandle.h"
 #include <memory>
 
 class Window;
@@ -17,15 +18,18 @@ public:
     void EndFrame();
     void Draw();
 
+    std::uint64_t GetSelected() const;
+    
+    void SetSelected(std::uint64_t id);
+
 private:
     Window& _window;
     Scene& _scene;
     InputManager& _input;
-
-    SceneObject* _selected = nullptr;
+    std::uint64_t _selectedId = SceneHandle::INVALID;
+    std::uint64_t _pendingDeleteObjId = SceneHandle::INVALID;
 
     void DrawHierarchy();
-    void DrawInspector();
-    void DrawContextMenu();
-    void DrawObjectNode(SceneObject* obj);
+    void DrawPropertyPanel();
+    void DrawObjectNode(std::uint64_t id);
 };

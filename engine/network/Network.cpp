@@ -308,6 +308,10 @@ void Network::CloseSocket()
 		_socket = INVALID_SOCKET;
 	}
 	_peers.clear();
+	_isHost = false;
+	_hostTimedOut = false;
+	_localId = INVALID_ID;
+	_nextClientId = 1;
 }
 
 void Network::SendRaw(const void* data, int size, const sockaddr_in& to)

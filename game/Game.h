@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../engine/game/IGame.h"
+#include "../engine/scene/SceneHandle.h"
 #include <string>
 #include <cstdint>
 #include <unordered_map>
@@ -19,10 +20,10 @@ public:
 	void OnShutdown() override;
 
 private:
-	std::unordered_map<std::uint32_t, SceneObject*> _remotePlayers;
+	std::unordered_map<std::uint32_t, std::uint64_t> _remotePlayersId;
 
-	SceneObject* _player = nullptr;
-	SceneObject* _dick = nullptr;
+	std::uint64_t _playerId = SceneHandle::INVALID;
+	std::uint64_t _dickId = SceneHandle::INVALID;
 
 	bool _isHost = false;
 	std::string _connectIp;

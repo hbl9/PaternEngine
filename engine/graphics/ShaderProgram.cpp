@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include <sstream>
 #include <fstream>
+#include <iostream>
 
 ShaderProgram::ShaderProgram(const std::string& vertexPath, const std::string& fragmentPath)
 { LoadFromFiles(vertexPath, fragmentPath); }
@@ -76,6 +77,7 @@ GLuint ShaderProgram::CompileShader(GLenum type, const std::string& src, const s
 		char infoLog[512] = {};
 		glGetShaderInfoLog(shader, sizeof(infoLog), nullptr, infoLog);
 		glDeleteShader(shader);
+		std::cerr << "[ShaderProgram] Compile failed: " << path << "\n" << infoLog << "\n";
 		throw std::runtime_error("[ShaderProgram] Shader compilation failed: " + path + '\n' + infoLog);
 	}
 

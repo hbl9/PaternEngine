@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <memory>
 
 class IGame;
@@ -19,6 +20,8 @@ public:
 
 	bool Init(std::unique_ptr<IGame> game, std::unique_ptr<ICameraController> cameraController);
 	void Run();
+
+	std::uint64_t PickObjectAt(float mouseX, float mouseY);
 
 private:
 	std::unique_ptr<IGame>			   _game			 = nullptr;

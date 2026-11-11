@@ -64,7 +64,15 @@ void InputManager::SetupInputCallbacks(Window* window)
 
 	glfwSetKeyCallback(winGL, [](GLFWwindow* w, int key, int scancode, int action, int mods)
 		{
-			if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+			if (action != GLFW_PRESS) return;
+
+			if (key == GLFW_KEY_F1)
+			{
+				bool now = !g_window->IsCursorCaptured();
+				g_window->SetCursorCaptured(now);
+				if (now) g_input->ResetMouse();
+			}
+			else if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 				g_window->SetCursorCaptured(false);
 		});
 }

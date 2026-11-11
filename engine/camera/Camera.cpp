@@ -24,6 +24,19 @@ glm::mat4 Camera::GetProjectionMatrix(float aspect) const
 	}
 	return _projection;
 }
+void Camera::GetRayFromScreen(float ndcX, float ndcY, float aspect, glm::vec3& outOrigin, glm::vec3& outDir) const
+{
+	glm::mat4 projection = GetProjectionMatrix(aspect);
+	glm::mat4 invVP = glm::inverse(projection * GetViewMatrix());
+
+	glm::vec4 nearP = invVP * glm::vec4(ndcX, ndcY, -1.0f, 1.0f);
+	glm::vec4 farP = invVP * glm::vec4(ndcX, ndcY, 1.0f, 1.0f);
+	nearP /= nearP.w;
+	farP /= farP.w;
+
+	outOrigin = glm::vec3(nearP);
+	outDir = glm::normalize(glm::vec3(farP - nearP));
+}
 
 void Camera::SetNearFar(float nearZ, float farZ)
 {

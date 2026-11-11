@@ -1,6 +1,9 @@
 #pragma once
 
 #ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <winsock2.h>
 #pragma comment(lib, "ws2_32.lib")
 #endif

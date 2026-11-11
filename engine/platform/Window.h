@@ -26,7 +26,7 @@ public:
 	void MakeCurrent();
 
 	GLFWwindow* GetWindow() const;
-	glm::ivec2 GetSizeWindow() const;
+	glm::ivec2 GetFramebufferSize() const;
 
 	void UpdateFrameBufferSize();
 	void SwapBuffers();
@@ -36,7 +36,7 @@ public:
 
 private:
 	GLFWwindow* _window = nullptr;
-	int _width = 0, _height = 0;
+	int _framebufferWidth = 0, _framebufferHeight = 0;
 
 	bool _cursorCaptured = false;
 };

@@ -1,6 +1,7 @@
 #include "Mesh.h"
 #include <glad/glad.h>
 #include <stdexcept>
+#include <glm/common.hpp>
 
 Mesh::Mesh() = default;
 Mesh::~Mesh() { Release(); }
@@ -25,14 +26,20 @@ Mesh& Mesh::operator=(Mesh&& other) noexcept
 	return *this;
 }
 
-void Mesh::Upload(std::span<const float> vertices,
-	std::span<const VertexAttribute> layout, std::span<const std::uint32_t> indices)
+const glm::vec3& Mesh::GetAabbMax() const { return _aabbMax; }
+const glm::vec3& Mesh::GetAabbMin() const { return _aabbMin; }
+
+bool Mesh::HasAabb() const { return _hasAabb; }
+
+void Mesh::Upload(std::span<const float> vertices, std::span<const VertexAttribute> layout, std::span<const std::uint32_t> indices)
 {
 	Release();
 
 	if (vertices.empty()) throw std::invalid_argument("[Mesh] Vertex array is empty");
 	if (layout.empty())   throw std::invalid_argument("[Mesh] Vertex layout is empty");
 	if (indices.empty())  throw std::invalid_argument("[Mesh] Index array is empty");
+
+	ComputeAabb(vertices, layout);
 
 	glGenVertexArrays(1, &_vao);
 	glBindVertexArray(_vao);
@@ -78,4 +85,39 @@ void Mesh::Release()
 
 	_vao = _vbo = _ebo = 0;
 	_indexCount = 0;
+}
+
+void Mesh::ComputeAabb(std::span<const float> vertices, std::span<const VertexAttribute> layout)
+{
+	_hasAabb = false;
+
+	const VertexAttribute* posAttr = nullptr;
+	for (const VertexAttribute& va : layout)
+		if (!va.index)
+		{
+			posAttr = &va;
+			break;
+		}
+	if (!posAttr || posAttr->size < 3) return;
+
+	const std::size_t strideFloats = posAttr->stride / sizeof(float);
+	if (!strideFloats) return;
+
+	const std::size_t offsetFloats = posAttr->offset / sizeof(float);
+	const std::size_t vertexCount = vertices.size() / strideFloats;
+
+	glm::vec3 min(std::numeric_limits<float>::max());
+	glm::vec3 max(std::numeric_limits<float>::lowest());
+
+	for (std::size_t i = 0; i < vertexCount; i++)
+	{
+		const float* pos = vertices.data() + i * strideFloats + offsetFloats;
+		const glm::vec3 vertex(pos[0], pos[1], pos[2]);
+		min = glm::min(min, vertex);
+		max = glm::max(max, vertex);
+	}
+
+	_aabbMin = min;
+	_aabbMax = max;
+	_hasAabb = true;
 }
